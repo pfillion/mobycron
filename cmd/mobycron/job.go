@@ -34,7 +34,7 @@ func (j *Job) Run() {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.WithField("output", string(out)).WithError(err).Errorln("job completed with error")
 	} else {
-		log.WithField("output", string(out)).Infoln("job completed sucessfully")
+		log.WithField("output", string(out)).Infoln("job completed successfully")
 	}
 
 	j.cron.sync.Done()

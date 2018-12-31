@@ -40,7 +40,7 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed sucessfully"),
+				hasOutput("job completed successfully"),
 			),
 		},
 		{
@@ -55,7 +55,7 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed sucessfully"),
+				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
 			),
 		},
@@ -71,7 +71,7 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed sucessfully"),
+				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
 			),
 		},
