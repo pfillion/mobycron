@@ -4,9 +4,9 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/spf13/afero"
-
+	"github.com/pfillion/mobycron/pkg/cron"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 )
 
 var osChan = make(chan os.Signal)
@@ -16,8 +16,8 @@ var exiter = log.Exit
 func main() {
 	log.SetLevel(log.InfoLevel)
 
-	c := NewCron(fs)
-	if err := c.LoadConfig("/config/config.json"); err != nil {
+	c := cron.NewCron(fs)
+	if err := c.LoadConfig("/configs/config.json"); err != nil {
 		log.Errorln(err)
 		exiter(1)
 	}

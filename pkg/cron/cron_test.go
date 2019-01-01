@@ -1,4 +1,4 @@
-package main
+package cron
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func TestAddJob(t *testing.T) {
 	type checkFunc func(*testing.T, *Cron, string, error)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
-	type mockFunc func(*MockCronRunner, *Cron)
+	type mockFunc func(*MockRunner, *Cron)
 
 	hasError := func(want string) checkFunc {
 		return func(t *testing.T, c *Cron, out string, err error) {
@@ -47,7 +47,7 @@ func TestAddJob(t *testing.T) {
 		{
 			name:  "valid cron parameters",
 			entry: &Entry{"3 * * * * *", "/bin/bash", []string{"-c echo 1"}},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * * *", &Job{"/bin/bash", []string{"-c echo 1"}, c})
 			},
 			checks: check(
@@ -72,7 +72,7 @@ func TestAddJob(t *testing.T) {
 		{
 			name:  "empty args",
 			entry: &Entry{"3 * * * * *", "/bin/bash", []string{""}},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), &Job{"/bin/bash", []string{""}, c})
 			},
 			checks: check(
@@ -82,7 +82,7 @@ func TestAddJob(t *testing.T) {
 		{
 			name:  "nil args",
 			entry: &Entry{"3 * * * * *", "/bin/bash", nil},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * * *", &Job{"/bin/bash", nil, c})
 			},
 			checks: check(
@@ -99,7 +99,7 @@ func TestAddJob(t *testing.T) {
 		{
 			name:  "CronRunner.AddJob return error",
 			entry: &Entry{"3 * * * * *", "/bin/bash", nil},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(fmt.Errorf("a error"))
 			},
 			checks: check(
@@ -117,7 +117,7 @@ func TestAddJob(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			r := NewMockCronRunner(ctrl)
+			r := NewMockRunner(ctrl)
 
 			c := &Cron{r, nil, nil}
 			if tt.mock != nil {
@@ -139,7 +139,7 @@ func TestAddJobs(t *testing.T) {
 	type checkFunc func(*testing.T, *Cron, string, error)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
-	type mockFunc func(*MockCronRunner, *Cron)
+	type mockFunc func(*MockRunner, *Cron)
 
 	hasError := func(want string) checkFunc {
 		return func(t *testing.T, c *Cron, out string, err error) {
@@ -169,7 +169,7 @@ func TestAddJobs(t *testing.T) {
 		{
 			name:    "one entries",
 			entries: []Entry{{"3 * * * * *", "echo", []string{"1"}}},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * * *", &Job{"echo", []string{"1"}, c})
 			},
 			checks: check(
@@ -182,7 +182,7 @@ func TestAddJobs(t *testing.T) {
 				{"1 * * * * *", "echo1", []string{"1"}},
 				{"2 * * * * *", "echo2", []string{"2"}},
 			},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("1 * * * * *", &Job{"echo1", []string{"1"}, c})
 				r.EXPECT().AddJob("2 * * * * *", &Job{"echo2", []string{"2"}, c})
 			},
@@ -193,7 +193,7 @@ func TestAddJobs(t *testing.T) {
 		{
 			name:    "AddJob return error",
 			entries: []Entry{{"3 * * * * *", "echo", []string{"1"}}},
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(fmt.Errorf("a error"))
 			},
 			checks: check(
@@ -217,7 +217,7 @@ func TestAddJobs(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			r := NewMockCronRunner(ctrl)
+			r := NewMockRunner(ctrl)
 
 			c := &Cron{r, nil, nil}
 			if tt.mock != nil {
@@ -239,7 +239,7 @@ func TestStart(t *testing.T) {
 	type checkFunc func(*testing.T, string)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
-	type mockFunc func(*MockCronRunner)
+	type mockFunc func(*MockRunner)
 
 	hasOutput := func(want string) checkFunc {
 		return func(t *testing.T, out string) {
@@ -254,7 +254,7 @@ func TestStart(t *testing.T) {
 	}{
 		{
 			name: "start",
-			mock: func(r *MockCronRunner) {
+			mock: func(r *MockRunner) {
 				r.EXPECT().Start()
 			},
 			checks: check(
@@ -271,7 +271,7 @@ func TestStart(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			r := NewMockCronRunner(ctrl)
+			r := NewMockRunner(ctrl)
 			if tt.mock != nil {
 				tt.mock(r)
 			}
@@ -293,7 +293,7 @@ func TestStop(t *testing.T) {
 	type checkFunc func(*testing.T, string)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
-	type mockFunc func(*MockCronRunner, *MockJobSynchroniser)
+	type mockFunc func(*MockRunner, *MockJobSynchroniser)
 
 	hasOutput := func(want string) checkFunc {
 		return func(t *testing.T, out string) {
@@ -308,7 +308,7 @@ func TestStop(t *testing.T) {
 	}{
 		{
 			name: "stop",
-			mock: func(r *MockCronRunner, s *MockJobSynchroniser) {
+			mock: func(r *MockRunner, s *MockJobSynchroniser) {
 				r.EXPECT().Stop()
 				s.EXPECT().Wait()
 			},
@@ -327,7 +327,7 @@ func TestStop(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			r := NewMockCronRunner(ctrl)
+			r := NewMockRunner(ctrl)
 			s := NewMockJobSynchroniser(ctrl)
 			if tt.mock != nil {
 				tt.mock(r, s)
@@ -460,7 +460,7 @@ func TestLoadConfig(t *testing.T) {
 	type checkFunc func(*testing.T, *Cron, string, error)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
-	type mockFunc func(*MockCronRunner, *Cron)
+	type mockFunc func(*MockRunner, *Cron)
 
 	hasError := func(want string) checkFunc {
 		return func(t *testing.T, c *Cron, out string, err error) {
@@ -489,7 +489,7 @@ func TestLoadConfig(t *testing.T) {
 	}{
 		{
 			name:     "one entry",
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config: `[
 						{
 							"schedule": "0/2 * * 12 * *",
@@ -499,7 +499,7 @@ func TestLoadConfig(t *testing.T) {
 							]
 						}
 					]`,
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("0/2 * * 12 * *", &Job{"echo", []string{"boby"}, c})
 			},
 			checks: check(
@@ -509,7 +509,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name:     "many entries",
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config: `[
 						{
 							"schedule": "0/2 * * 12 * *",
@@ -526,7 +526,7 @@ func TestLoadConfig(t *testing.T) {
 							]
 						}
 					]`,
-			mock: func(r *MockCronRunner, c *Cron) {
+			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("0/2 * * 12 * *", &Job{"command1", []string{"arg1"}, c})
 				r.EXPECT().AddJob("5 5 * * * *", &Job{"command2", []string{"arg2"}, c})
 			},
@@ -537,7 +537,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name:     "file not exist",
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config:   "",
 			checks: check(
 				hasError("failed to read config file"),
@@ -545,7 +545,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name:     "json not valid",
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config: `[
 						{
 							error
@@ -557,7 +557,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name:     "invalid entry",
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config: `[
 						{
 							"schedule": "",
@@ -586,7 +586,7 @@ func TestLoadConfig(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			r := NewMockCronRunner(ctrl)
+			r := NewMockRunner(ctrl)
 
 			c := &Cron{r, nil, fs}
 			if tt.mock != nil {

@@ -1,0 +1,21 @@
+[
+    {
+        "schedule": "0/2 * * * * *",
+        "command": "bash",
+        "args": [
+            "-c",
+            "echo Hello $NAME"            
+        ]
+    },
+    {
+        "schedule": "0/5 * * * * *",
+        "command": "curl",
+        "args": [
+            "-s",
+            "-S",
+            "-X",
+            "GET",
+            "http://exemple.com"            
+        ]
+    }
+]

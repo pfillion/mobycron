@@ -44,7 +44,7 @@ func TestMain(t *testing.T) {
 		{
 			name:     "end to end",
 			osChan:   make(chan os.Signal),
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config: `[
 						{
 							"schedule": "* * * * * *",
@@ -64,7 +64,7 @@ func TestMain(t *testing.T) {
 		{
 			name:     "error on load config",
 			osChan:   make(chan os.Signal),
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config:   "",
 			checks: check(
 				hasExitCode(1),
@@ -74,7 +74,7 @@ func TestMain(t *testing.T) {
 		{
 			name:     "error on run",
 			osChan:   nil,
-			filename: "/config/config.json",
+			filename: "/configs/config.json",
 			config: `[
 						{
 							"schedule": "* * * * * *",

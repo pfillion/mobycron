@@ -1,4 +1,4 @@
-package main
+package cron
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-// CronRunner todo
-type CronRunner interface {
+// Runner todo
+type Runner interface {
 	AddJob(spec string, cmd cron.Job) error
 	Start()
 	Stop()
@@ -28,7 +28,7 @@ type JobSynchroniser interface {
 
 // Cron todo
 type Cron struct {
-	runner CronRunner
+	runner Runner
 	sync   JobSynchroniser
 	fs     afero.Fs
 }
