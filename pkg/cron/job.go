@@ -7,14 +7,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Job todo
+// Job run a command with specified args.
 type Job struct {
 	command string
 	args    []string
 	cron    *Cron
 }
 
-// Run todo
+// Run a Job and log the output.
 func (j *Job) Run() {
 	log := log.WithFields(log.Fields{
 		"func":    "Run",

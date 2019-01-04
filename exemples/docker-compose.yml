@@ -1,0 +1,22 @@
+version: '3.6'
+services:
+  cron:
+    image: pfillion/mobycron:latest
+    environment:
+      - TZ=America/New_York
+      - NAME=World!!!
+      - REPO_1=rest:https://exemple.com/repo1
+    configs:
+      - source: mobycron-config
+        target: /configs/config.json
+    secrets:
+      - source: restic-passwd
+        target: /configs/passwd
+
+configs:
+  mobycron-config:
+    external: true
+
+secrets:
+  restic-passwd:
+    external: true

@@ -12,40 +12,41 @@ import (
 	"github.com/spf13/afero"
 )
 
-// Runner todo
+// Runner is an interface for testing robfig/cron
 type Runner interface {
 	AddJob(spec string, cmd cron.Job) error
 	Start()
 	Stop()
 }
 
-// JobSynchroniser todo
+// JobSynchroniser is an interface for testing sync.WaitGroup
 type JobSynchroniser interface {
 	Add(delta int)
 	Done()
 	Wait()
 }
 
-// Cron todo
+// Cron keeps track of any number of entries, invoking the associated Job as
+// specified by the schedule. It may be started and stopped.
 type Cron struct {
 	runner Runner
 	sync   JobSynchroniser
 	fs     afero.Fs
 }
 
-// Entry todo
+// Entry consists of a schedule and the command to execute on that schedule.
 type Entry struct {
 	Schedule string   `json:"schedule"`
 	Command  string   `json:"command"`
 	Args     []string `json:"args"`
 }
 
-// NewCron todo
+// NewCron return a new Cron job runner.
 func NewCron(fs afero.Fs) *Cron {
 	return &Cron{cron.New(), &sync.WaitGroup{}, fs}
 }
 
-// AddJob todo
+// AddJob adds a Entry to the Cron to be run on the given schedule.
 func (c *Cron) AddJob(entry *Entry) error {
 	if entry == nil {
 		return errors.New("entry is required")
@@ -73,7 +74,7 @@ func (c *Cron) AddJob(entry *Entry) error {
 	return nil
 }
 
-// AddJobs todo
+// AddJobs adds entries to the Cron.
 func (c *Cron) AddJobs(entries []Entry) error {
 	if entries == nil {
 		return errors.New("entries is required")
@@ -86,7 +87,7 @@ func (c *Cron) AddJobs(entries []Entry) error {
 	return nil
 }
 
-// LoadConfig todo
+// LoadConfig read Entry from file in JSON format and add them to Cron.
 func (c *Cron) LoadConfig(filename string) error {
 	log.WithFields(log.Fields{
 		"func":     "LoadConfig",
@@ -109,7 +110,7 @@ func (c *Cron) LoadConfig(filename string) error {
 	return nil
 }
 
-// Run todo
+// Run the Cron scheduler and wait for specific os.Signal to stop.
 func (c *Cron) Run(cs chan os.Signal, sigs ...os.Signal) error {
 	if cs == nil {
 		return errors.New("channel is required")
@@ -130,13 +131,13 @@ func (c *Cron) Run(cs chan os.Signal, sigs ...os.Signal) error {
 	return nil
 }
 
-// Start todo
+// Start the Cron scheduler.
 func (c *Cron) Start() {
 	log.WithFields(log.Fields{"func": "Start"}).Infoln("start cron")
 	c.runner.Start()
 }
 
-// Stop todo
+// Stop the Cron scheduler.
 func (c *Cron) Stop() {
 	log := log.WithFields(log.Fields{"func": "Stop"})
 

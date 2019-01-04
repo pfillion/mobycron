@@ -18,4 +18,17 @@
             "http://exemple.com"            
         ]
     }
+    {
+        "schedule": "0 0 3 ? * *",
+        "command": "/usr/bin/restic",
+        "args": [
+            "-r",
+            "$REPO_1",
+            "-p",
+            "/configs/passwd",
+            "forget",
+            "--keep-daily",
+            "7"
+        ]
+    }
 ]
