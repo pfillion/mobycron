@@ -1,0 +1,64 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  labels:
+    - key: 'org.label-schema.build-date'
+      value: '.*'
+      isRegex: true
+    - key: 'org.label-schema.vcs-ref'
+      value: '.*'
+      isRegex: true  
+    - key: 'org.label-schema.version'
+      value: '.*'
+      isRegex: true    
+  exposedPorts: []
+  volumes: []
+  entrypoint: ["mobycron"]
+  cmd: []
+  workdir: ""
+
+fileExistenceTests:
+- name: 'mobycron'
+  path: '/usr/bin/mobycron'
+  shouldExist: true
+  permissions: '-rwxr-xr-x'
+  uid: 0
+  gid: 0
+  isExecutableBy: 'group'
+- name: 'ca-certificates'
+  path: '/usr/share/ca-certificates/mozilla'
+  shouldExist: true
+- name: 'tzdata'
+  path: '/usr/share/zoneinfo/'
+  shouldExist: true
+
+commandTests:
+  - name: "fuse is functional"
+    command: "fusermount"
+    args: ["-V"]
+    expectedOutput: ["fusermount version: .*"]
+    exitCode: 0
+  - name: "openssh is functional"
+    command: "ssh"
+    args: ["-V"]
+    expectedError: ["OpenSSH.*"]
+    exitCode: 0
+  - name: "curl is functional"
+    command: "curl"
+    args: ["--version"]
+    expectedOutput: ["curl .*"]
+    exitCode: 0
+  - name: "bash is functional"
+    command: "bash"
+    args: ["--version"]
+    expectedOutput: ["GNU bash, version .*"]
+    exitCode: 0
+  - name: "restic is functional"
+    command: "restic"
+    args: ["version"]
+    expectedOutput: ["restic .*"]
+    exitCode: 0
+  - name: "mobycron is functional"
+    command: "mobycron"
+    expectedError: ["failed to read config file"]
+    exitCode: 1

@@ -25,34 +25,32 @@ help: ## Show the Makefile help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 go-get: ## Get external packages
-	go get github.com/robfig/cron
-	go get github.com/sirupsen/logrus
-	go get github.com/pkg/errors
-	go get github.com/spf13/afero
-	go get gotest.tools/assert
-	go get github.com/golang/mock/gomock
+	go get -u -v github.com/golang/lint/golint
+	go get -u -v github.com/robfig/cron
+	go get -u -v github.com/sirupsen/logrus
+	go get -u -v github.com/pkg/errors
+	go get -u -v github.com/spf13/afero
+	go get -u -v gotest.tools/assert
+	go get -u -v github.com/golang/mock/gomock
 
 go-mock: ## Generate mock file
 	mockgen -source=$(ROOT_FOLDER)/cron/cron.go -destination=$(ROOT_FOLDER)/cron/cron_mock.go -package=cron
 
-go-build: ## Build go app
-	make go-get
-
+go-build: go-get ## Build go app
+	golint -set_exit_status ./...
+	go vet -v ./...
 	GOOS=${GOOS} GOARCH=${GOARCH} go build -o $(BIN_FOLDER)/$(APP_NAME) -v $(APP_FOLDER)
 
-go-rebuild: ## Rebuild go app
-	make go-clean
-	make go-build
+go-rebuild: go-clean go-build ## Rebuild go app
 
 go-test: ## Test go app
-	go test -v ./...
+	go test -cover -v ./...
 
 go-clean: ## Clean go app
-	go clean
+	go clean -cache -testcache
 	rm -f $(BIN_FOLDER)/$(APP_NAME)
 
 go-run: ## Run go app
-	make go-build
 	$(BIN_FOLDER)/$(APP_NAME)
 
 docker-build: ## Build the image form Dockerfile
@@ -70,6 +68,9 @@ docker-rebuild: ## Rebuild the image form Dockerfile
 		--no-cache -t $(NS)/$(IMAGE_NAME):$(VERSION) -f Dockerfile .
 
 docker-push: ## Push the image to a registry
+ifdef DOCKER_USERNAME
+	echo "$(DOCKER_PASSWORD)" | docker login -u "$(DOCKER_USERNAME)" --password-stdin
+endif
 	docker push $(NS)/$(IMAGE_NAME):$(VERSION)
     
 docker-shell: ## Run shell command in the container
@@ -87,21 +88,22 @@ docker-stop: ## Stop the container
 docker-rm: ## Remove the container
 	docker rm $(CONTAINER_NAME)-$(CONTAINER_INSTANCE)
 
-build: ## Build all
-	make go-build
-	make docker-build
+docker-test: ## Run docker container tests
+	docker run \
+		--rm \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(ROOT_FOLDER)/tests:/tests \
+		gcr.io/gcp-runtimes/container-structure-test:latest \
+			test \
+			--image $(NS)/$(IMAGE_NAME):$(VERSION) \
+			--config /tests/config.yaml
 
-rebuild: ## Rebuild all
-	make go-rebuild
-	make docker-rebuild
+build: go-build docker-build ## Build all
 
-run: ## Run all
-	make docker-run
+rebuild: go-rebuild docker-rebuild ## Rebuild all
 
-test: ## Run all tests
-	make go-test
+run: docker-run ## Run all
 
-release: ## Build and push the image to a registry
-	make build
-	make test
-	make docker-push
+test: go-test docker-test ## Run all tests
+
+release: build test docker-push ## Build and push the image to a registry

@@ -28,5 +28,5 @@ RUN apk add --update --no-cache \
 COPY --from=restic_builder /usr/bin/restic /usr/bin
 COPY bin /usr/bin
 
-ENTRYPOINT [ "/usr/bin/mobycron"]
+ENTRYPOINT [ "mobycron"]
 
