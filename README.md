@@ -1,8 +1,10 @@
 # mobycron
 
-[![](https://images.microbadger.com/badges/image/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own image badge on microbadger.com")
-[![](https://images.microbadger.com/badges/version/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own version badge on microbadger.com")
-[![](https://images.microbadger.com/badges/commit/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
+[![Build Status](https://drone.pfillion.com/api/badges/pfillion/mobycron/status.svg?branch=master)](https://drone.pfillion.com/pfillion/mobycron)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pfillion/mobycron)](https://goreportcard.com/report/github.com/pfillion/mobycron)
+[![microbadger image](https://images.microbadger.com/badges/image/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own image badge on microbadger.com")
+[![microbadger image](https://images.microbadger.com/badges/version/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own version badge on microbadger.com")
+[![microbadger image](https://images.microbadger.com/badges/commit/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
 
 A simple cron deamon for docker written in go. It use the [robfig cron library](https://github.com/robfig/cron) engine and all cron jobs can be confgurated by a JSON file.
 
@@ -52,7 +54,7 @@ You can mount directly the ```config.json``` file or use docker configuration to
             "GET",
             "http://exemple.com"
         ]
-    }
+    },
     {
         "schedule": "0 0 3 ? * *",
         "command": "/usr/bin/restic",

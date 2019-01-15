@@ -59,6 +59,8 @@ commandTests:
     expectedOutput: ["restic .*"]
     exitCode: 0
   - name: "mobycron is functional"
-    command: "mobycron"
-    expectedError: ["failed to read config file"]
-    exitCode: 1
+    setup: [["mkdir", "/configs"], ["bash", "-c", "echo '[{\"schedule\": \"* * * * * *\",\"command\": \"bash\",\"args\": [\"-c\",\"echo Hello Joe\"]}]' > /configs/config.json"]]
+    command: "timeout"
+    args: ["-t", "2", "mobycron"]
+    expectedError: ["Hello Joe"]
+    exitCode: 0

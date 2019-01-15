@@ -89,14 +89,7 @@ docker-rm: ## Remove the container
 	docker rm $(CONTAINER_NAME)-$(CONTAINER_INSTANCE)
 
 docker-test: ## Run docker container tests
-	docker run \
-		--rm \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v $(ROOT_FOLDER)/tests:/tests \
-		gcr.io/gcp-runtimes/container-structure-test:latest \
-			test \
-			--image $(NS)/$(IMAGE_NAME):$(VERSION) \
-			--config /tests/config.yaml
+	container-structure-test test --image $(NS)/$(IMAGE_NAME):$(VERSION) --config tests/config.yaml
 
 build: go-build docker-build ## Build all
 

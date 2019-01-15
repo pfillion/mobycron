@@ -1,0 +1,69 @@
+kind: pipeline
+name: main
+
+workspace:
+  base: /go
+  path: src/github.com/pfillion/mobycron
+
+steps:
+- name: go-build
+  image: pfillion/drone-golang
+  commands:
+  - make go-build
+
+- name: go-test
+  image: pfillion/drone-golang
+  commands:
+  - make go-test
+
+- name: docker-build
+  image: pfillion/drone-dind
+  volumes:
+  - name: docker_volume
+    path: /var/run
+  commands:
+  - make docker-build
+
+- name: docker-test
+  image: pfillion/drone-dind
+  volumes:
+  - name: docker_volume
+    path: /var/run
+  commands:
+  - make docker-test
+
+- name: docker-push
+  image: pfillion/drone-dind
+  volumes:
+  - name: docker_volume
+    path: /var/run
+  environment:
+    DOCKER_USERNAME:
+      from_secret: docker_username
+    DOCKER_PASSWORD:
+      from_secret: docker_password
+  commands:
+  - make docker-push
+
+- name: notify-microbadger
+  image: plugins/webhook
+  settings:
+    urls:
+      from_secret: webhook_urls
+
+- name: notify-goreportcard
+  image: appropriate/curl
+  commands:
+  - curl -sS -d "repo=github.com/pfillion/mobycron" https://goreportcard.com/checks
+
+services:
+- name: docker
+  image: pfillion/drone-dind
+  privileged: true
+  volumes:
+  - name: docker_volume
+    path: /var/run
+
+volumes:
+- name: docker_volume
+  temp: {}
