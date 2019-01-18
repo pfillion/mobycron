@@ -1,6 +1,4 @@
-FROM restic/restic:0.9.3 as restic_builder
-
-FROM alpine:latest
+FROM alpine:edge
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
@@ -24,9 +22,9 @@ RUN apk add --update --no-cache \
     curl \
     bash \
     tzdata \
-    mariadb-backup
+    mariadb-backup \
+    restic
 
-COPY --from=restic_builder /usr/bin/restic /usr/bin
 COPY bin /usr/bin
 
 ENTRYPOINT [ "mobycron"]
