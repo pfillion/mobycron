@@ -74,7 +74,7 @@ endif
 	docker push $(NS)/$(IMAGE_NAME):$(VERSION)
     
 docker-shell: ## Run shell command in the container
-	docker run --rm --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) -i -t $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION) /bin/sh
+	docker run --rm --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) -it --entrypoint "" $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION) /bin/sh
 
 docker-run: ## Run the container
 	docker run --rm --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION)

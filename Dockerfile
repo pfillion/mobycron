@@ -23,7 +23,8 @@ RUN apk add --update --no-cache \
     openssh-client \
     curl \
     bash \
-    tzdata
+    tzdata \
+    mariadb-backup
 
 COPY --from=restic_builder /usr/bin/restic /usr/bin
 COPY bin /usr/bin

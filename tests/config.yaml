@@ -58,6 +58,11 @@ commandTests:
     args: ["version"]
     expectedOutput: ["restic .*"]
     exitCode: 0
+  - name: "mariabackup is functional"
+    command: "mariabackup"
+    args: ["--version"]
+    expectedError: ["mariabackup based on MariaDB server .*"]
+    exitCode: 0
   - name: "mobycron is functional"
     setup: [["mkdir", "/configs"], ["bash", "-c", "echo '[{\"schedule\": \"* * * * * *\",\"command\": \"bash\",\"args\": [\"-c\",\"echo Hello Joe\"]}]' > /configs/config.json"]]
     command: "timeout"
