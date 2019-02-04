@@ -22,7 +22,6 @@ RUN apk add --update --no-cache \
     curl \
     bash \
     tzdata \
-    mariadb-backup \
     restic
 
 COPY bin /usr/bin
