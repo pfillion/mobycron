@@ -25,7 +25,7 @@ help: ## Show the Makefile help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 go-get: ## Get external packages
-	go get -u -v github.com/golang/lint/golint
+	go get -u -v golang.org/x/lint/golint
 	go get -u -v github.com/robfig/cron
 	go get -u -v github.com/sirupsen/logrus
 	go get -u -v github.com/pkg/errors
