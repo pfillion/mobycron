@@ -24,6 +24,14 @@ steps:
   commands:
   - make docker-build
 
+- name: bats-test
+  image: pfillion/drone-dind
+  volumes:
+  - name: docker_volume
+    path: /var/run
+  commands:
+  - make bats-test
+
 - name: docker-test
   image: pfillion/drone-dind
   volumes:
