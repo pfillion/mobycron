@@ -58,9 +58,3 @@ commandTests:
     args: ["version"]
     expectedOutput: ["restic .*"]
     exitCode: 0
-  - name: "mobycron is functional"
-    setup: [["mkdir", "/configs"], ["bash", "-c", "echo '[{\"schedule\": \"* * * * * *\",\"command\": \"bash\",\"args\": [\"-c\",\"echo Hello Joe\"]}]' > /configs/config.json"]]
-    command: "timeout"
-    args: ["-t", "2", "mobycron"]
-    expectedError: ["Hello Joe"]
-    exitCode: 0

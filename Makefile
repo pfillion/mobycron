@@ -4,6 +4,9 @@ SHELL = /bin/sh
 .PHONY: help
 .DEFAULT_GOAL := help
 
+# Bats parameters
+TEST_FOLDER ?= $(shell pwd)/tests
+
 # Go parameters
 ROOT_FOLDER=$(shell pwd)
 BIN_FOLDER=$(ROOT_FOLDER)/bin
@@ -23,6 +26,9 @@ BUILD_DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%S")
 
 help: ## Show the Makefile help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+bats-test: ## Test bash scripts
+	bats $(TEST_FOLDER)
 
 go-get: ## Get external packages
 	go get -u -v golang.org/x/lint/golint
@@ -97,6 +103,6 @@ rebuild: go-rebuild docker-rebuild ## Rebuild all
 
 run: docker-run ## Run all
 
-test: go-test docker-test ## Run all tests
+test: go-test bats-test docker-test ## Run all tests
 
 release: build test docker-push ## Build and push the image to a registry
