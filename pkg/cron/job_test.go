@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	"gotest.tools/env"
@@ -24,12 +25,14 @@ func TestJobRun(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		command string
-		args    []string
-		envs    map[string]string
-		mock    mockFunc
-		checks  []checkFunc
+		name           string
+		command        string
+		args           []string
+		envs           map[string]string
+		secret         string
+		secretFilename string
+		mock           mockFunc
+		checks         []checkFunc
 	}{
 		{
 			name:    "run job",
@@ -60,6 +63,39 @@ func TestJobRun(t *testing.T) {
 			),
 		},
 		{
+			name:    "command with secret env variable",
+			command: "$CMD__FILE",
+			args:    []string{"hello bob"},
+			envs: map[string]string{
+				"CMD__FILE": "/run/secret/secretFile",
+			},
+			secret:         "echo",
+			secretFilename: "/run/secret/secretFile",
+			mock: func(s *MockJobSynchroniser) {
+				s.EXPECT().Add(1)
+				s.EXPECT().Done()
+			},
+			checks: check(
+				hasOutput("job completed successfully"),
+				hasOutput("hello bob"),
+			),
+		},
+		{
+			name:    "command with invalid secret env variable",
+			command: "$CMD__FILE",
+			args:    []string{"hello bob"},
+			envs: map[string]string{
+				"CMD__FILE": "/path/not/exists",
+			},
+			mock: func(s *MockJobSynchroniser) {
+				s.EXPECT().Add(1)
+				s.EXPECT().Done()
+			},
+			checks: check(
+				hasOutput("invalid secret environment variable"),
+			),
+		},
+		{
 			name:    "args with env variable",
 			command: "echo",
 			args:    []string{"hello $NAME"},
@@ -73,6 +109,39 @@ func TestJobRun(t *testing.T) {
 			checks: check(
 				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
+			),
+		},
+		{
+			name:    "args with secret env variable",
+			command: "echo",
+			args:    []string{"hello $NAME__FILE"},
+			envs: map[string]string{
+				"NAME__FILE": "/run/secret/secretFile",
+			},
+			secret:         "bob",
+			secretFilename: "/run/secret/secretFile",
+			mock: func(s *MockJobSynchroniser) {
+				s.EXPECT().Add(1)
+				s.EXPECT().Done()
+			},
+			checks: check(
+				hasOutput("job completed successfully"),
+				hasOutput("hello bob"),
+			),
+		},
+		{
+			name:    "args with invalid secret env variable",
+			command: "echo",
+			args:    []string{"hello $NAME__FILE"},
+			envs: map[string]string{
+				"NAME__FILE": "/path/not/exists",
+			},
+			mock: func(s *MockJobSynchroniser) {
+				s.EXPECT().Add(1)
+				s.EXPECT().Done()
+			},
+			checks: check(
+				hasOutput("invalid secret environment variable"),
 			),
 		},
 		{
@@ -98,6 +167,12 @@ func TestJobRun(t *testing.T) {
 				defer f()
 			}
 
+			// File system
+			fs := afero.NewMemMapFs()
+			if tt.secret != "" {
+				afero.WriteFile(fs, tt.secretFilename, []byte(tt.secret), 0640)
+			}
+
 			// Log
 			out := &bytes.Buffer{}
 			log.SetOutput(out)
@@ -110,7 +185,7 @@ func TestJobRun(t *testing.T) {
 				tt.mock(s)
 			}
 
-			c := &Cron{nil, s, nil}
+			c := &Cron{nil, s, fs}
 			j := &Job{tt.command, tt.args, c}
 
 			// Act

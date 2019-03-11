@@ -60,7 +60,7 @@ You can mount directly the ```config.json``` file or use docker configuration to
         "command": "/usr/bin/restic",
         "args": [
             "-r",
-            "$REPO_1",
+            "$REPO__FILE",
             "-p",
             "/configs/passwd",
             "forget",
@@ -77,13 +77,17 @@ This file will schedule three cron job.
 * The first one will replace ```$NAME``` by the environnement variable configured in the container and print ```Hello``` + ```$NAME``` every 2 seconds.
 * The second will execute a ```curl``` command every 5 seconds. It may be usefull when you need to call any simple **webcron** or **webhook** URL like with [EasyCron](https://www.easycron.com)
 
-* The last one will forget and prune all restic snapshot older than 7 days every day at 3 AM. It use the environnement variable ```$REPO_1``` for telling to restic the repository to use and a password file ```/configs/passwd```mounted in the container.
+* The last one will forget and prune all restic snapshot older than 7 days every day at 3 AM. It use the secret environnement variable ```$REPO__FILE``` for telling to restic the repository to use and a password file ```/configs/passwd```mounted in the container.
 
 ## Environnement variables
 
 Cron job support any environnement variables specified by docker and replace it by the real value before executing the command.
 
-It also support ```TZ``` variable to confgure local time zone of the container. 
+It also support ```TZ``` variable to confgure local time zone of the container.
+
+## Docker Secrets
+
+As an alternative to passing sensitive information via environment variables, `__FILE` may be appended to any environment variables, causing the job to load the values for those variables from files present in the container. In particular, this can be used to load passwords from Docker secrets stored in `/run/secrets/<secret_name>` files.
 
 ## Docker compose
 

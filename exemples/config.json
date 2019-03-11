@@ -23,7 +23,7 @@
         "command": "/usr/bin/restic",
         "args": [
             "-r",
-            "$REPO_1",
+            "$REPO__FILE",
             "-p",
             "/configs/passwd",
             "forget",

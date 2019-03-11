@@ -3,8 +3,10 @@ package cron
 import (
 	"os"
 	"os/exec"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 )
 
 // Job run a command with specified args.
@@ -24,13 +26,28 @@ func (j *Job) Run() {
 
 	j.cron.sync.Add(1)
 
+	// Secret mapping
+	secretMapper := func(key string) string {
+		env := os.Getenv(key)
+		if strings.HasSuffix(key, "__FILE") {
+			data, err := afero.ReadFile(j.cron.fs, env)
+			if err != nil {
+				log.WithField("env", key).WithError(err).Errorln("invalid secret environment variable")
+				env = ""
+			} else {
+				env = string(data)
+			}
+		}
+		return env
+	}
+
 	// Expand env in all args
 	args := make([]string, len(j.args))
 	for i, arg := range j.args {
-		args[i] = os.ExpandEnv(arg)
+		args[i] = os.Expand(arg, secretMapper)
 	}
 
-	cmd := exec.Command(os.ExpandEnv(j.command), args...)
+	cmd := exec.Command(os.Expand(j.command, secretMapper), args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.WithField("output", string(out)).WithError(err).Errorln("job completed with error")
 	} else {
