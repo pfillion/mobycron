@@ -101,19 +101,22 @@ services:
     environment:
       - TZ=America/New_York
       - NAME=World!!!
-      - REPO_1=rest:https://exemple.com/repo1
+      - REPO__FILE=/run/secrets/restic-repo
     configs:
       - source: mobycron-config
         target: /configs/config.json
     secrets:
       - source: restic-passwd
         target: /configs/passwd
+      - restic-repo
 
 configs:
   mobycron-config:
     external: true
 
 secrets:
+  restic-repo:
+    external: true
   restic-passwd:
     external: true
 ```
