@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ func (c *Cron) AddJob(entry *Entry) error {
 		"func":     "AddJob",
 		"schedule": entry.Schedule,
 		"command":  entry.Command,
-		"args":     entry.Args,
+		"args":     strings.Join(entry.Args, " "),
 	}).Infoln("add job to cron")
 
 	if entry.Schedule == "" {
