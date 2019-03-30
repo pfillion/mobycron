@@ -21,7 +21,7 @@ func (j *Job) Run() {
 	log := log.WithFields(log.Fields{
 		"func":    "Run",
 		"command": j.command,
-		"args":    j.args,
+		"args":    strings.Join(j.args, " "),
 	})
 
 	j.cron.sync.Add(1)

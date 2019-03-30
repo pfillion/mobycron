@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"syscall"
 
@@ -12,9 +13,12 @@ import (
 var osChan = make(chan os.Signal)
 var fs = afero.NewOsFs()
 var exiter = log.Exit
+var output io.Writer = os.Stdout
 
 func main() {
+	log.SetOutput(output)
 	log.SetLevel(log.InfoLevel)
+	log.SetFormatter(&log.JSONFormatter{})
 
 	c := cron.NewCron(fs)
 	if err := c.LoadConfig("/configs/config.json"); err != nil {

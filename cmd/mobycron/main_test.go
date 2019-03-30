@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -34,6 +36,17 @@ func TestMain(t *testing.T) {
 		}
 	}
 
+	hasJSONOutput := func() checkFunc {
+		return func(t *testing.T, out string, exitCode int) {
+			for i, line := range strings.Split(out, "\n") {
+				if line != "" {
+					var js interface{}
+					assert.NilError(t, json.Unmarshal([]byte(line), &js), "line %d: %s", i, line)
+				}
+			}
+		}
+	}
+
 	tests := []struct {
 		name     string
 		osChan   chan os.Signal
@@ -57,6 +70,7 @@ func TestMain(t *testing.T) {
 			checks: check(
 				hasExitCode(0),
 				hasLogLevel(log.InfoLevel),
+				hasJSONOutput(),
 				hasOutput("load config file"),
 				hasOutput("cron is stopped, all jobs are completed"),
 			),
@@ -94,8 +108,9 @@ func TestMain(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			out := &bytes.Buffer{}
-			log.SetOutput(out)
+			// Replace log output
+			var out = &bytes.Buffer{}
+			output = out
 
 			// Replace exiter func in real code by a fake one
 			var exitCode int
