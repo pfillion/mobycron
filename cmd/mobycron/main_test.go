@@ -48,58 +48,26 @@ func TestMain(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		osChan   chan os.Signal
-		filename string
-		config   string
-		checks   []checkFunc
+		name   string
+		osChan chan os.Signal
+		checks []checkFunc
 	}{
 		{
-			name:     "end to end",
-			osChan:   make(chan os.Signal),
-			filename: "/configs/config.json",
-			config: `[
-						{
-							"schedule": "* * * * * *",
-							"command": "echo",
-							"args": [
-								"boby"
-							]
-						}
-					]`,
+			name:   "run",
+			osChan: make(chan os.Signal),
 			checks: check(
 				hasExitCode(0),
 				hasLogLevel(log.InfoLevel),
 				hasJSONOutput(),
-				hasOutput("load config file"),
 				hasOutput("cron is stopped, all jobs are completed"),
 			),
 		},
 		{
-			name:     "error on load config",
-			osChan:   make(chan os.Signal),
-			filename: "/configs/config.json",
-			config:   "",
+			name:   "error on run",
+			osChan: nil,
 			checks: check(
 				hasExitCode(1),
-				hasOutput("failed to read config file"),
-			),
-		},
-		{
-			name:     "error on run",
-			osChan:   nil,
-			filename: "/configs/config.json",
-			config: `[
-						{
-							"schedule": "* * * * * *",
-							"command": "echo",
-							"args": [
-								"boby"
-							]
-						}
-					]`,
-			checks: check(
-				hasExitCode(1),
+				hasJSONOutput(),
 				hasOutput("channel is required"),
 			),
 		},
@@ -124,9 +92,6 @@ func TestMain(t *testing.T) {
 
 			// Fake config file
 			fs = afero.NewMemMapFs()
-			if tt.config != "" {
-				afero.WriteFile(fs, tt.filename, []byte(tt.config), 0640)
-			}
 
 			// Send terminating signal
 			osChan = tt.osChan

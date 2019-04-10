@@ -347,13 +347,16 @@ func TestStop(t *testing.T) {
 }
 
 func TestNewCron(t *testing.T) {
+	// Arrange
+	fs := afero.NewOsFs()
+
 	// Act
-	c := NewCron(afero.NewOsFs())
+	c := NewCron(fs)
 
 	// Assert
 	assert.Assert(t, c.runner != nil)
 	assert.Assert(t, c.sync != nil)
-	assert.Assert(t, c.fs != nil)
+	assert.Assert(t, c.fs == fs)
 }
 
 func TestRun(t *testing.T) {
@@ -384,10 +387,12 @@ func TestRun(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		args   *args
-		sing   os.Signal
-		checks []checkFunc
+		name     string
+		args     *args
+		sing     os.Signal
+		filename string
+		config   string
+		checks   []checkFunc
 	}{
 		{
 			name: "stop when signal match",
@@ -429,6 +434,15 @@ func TestRun(t *testing.T) {
 				hasError("channel is required"),
 			),
 		},
+		{
+			name:     "error on load configuration",
+			args:     &args{make(chan os.Signal), []os.Signal{syscall.SIGINT}},
+			filename: "/configs/config.json",
+			config:   `error`,
+			checks: check(
+				hasError("failed to parse JSON data from config file"),
+			),
+		},
 	}
 
 	for _, tt := range tests {
@@ -437,13 +451,18 @@ func TestRun(t *testing.T) {
 			out := &bytes.Buffer{}
 			log.SetOutput(out)
 
+			fs := afero.NewMemMapFs()
+			if tt.filename != "" {
+				afero.WriteFile(fs, tt.filename, []byte(tt.config), 0640)
+			}
+
 			if tt.args.c != nil {
 				go func() {
 					tt.args.c <- tt.sing
 				}()
 			}
 
-			c := NewCron(afero.NewOsFs())
+			c := NewCron(fs)
 
 			// Act
 			err := c.Run(tt.args.c, tt.args.sig...)
@@ -536,11 +555,10 @@ func TestLoadConfig(t *testing.T) {
 			),
 		},
 		{
-			name:     "file not exist",
-			filename: "/configs/config.json",
-			config:   "",
+			name: "file not exist",
 			checks: check(
-				hasError("failed to read config file"),
+				hasNilError(),
+				hasOutput("no config was loaded, file not exist"),
 			),
 		},
 		{
@@ -580,7 +598,7 @@ func TestLoadConfig(t *testing.T) {
 			log.SetOutput(out)
 
 			fs := afero.NewMemMapFs()
-			if tt.config != "" {
+			if tt.filename != "" {
 				afero.WriteFile(fs, tt.filename, []byte(tt.config), 0640)
 			}
 

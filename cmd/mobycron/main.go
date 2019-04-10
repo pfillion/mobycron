@@ -21,11 +21,6 @@ func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
 	c := cron.NewCron(fs)
-	if err := c.LoadConfig("/configs/config.json"); err != nil {
-		log.Errorln(err)
-		exiter(1)
-	}
-
 	if err := c.Run(osChan, syscall.SIGINT, syscall.SIGTERM); err != nil {
 		log.Errorln(err)
 		exiter(1)

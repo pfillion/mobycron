@@ -90,22 +90,24 @@ func (c *Cron) AddJobs(entries []Entry) error {
 
 // LoadConfig read Entry from file in JSON format and add them to Cron.
 func (c *Cron) LoadConfig(filename string) error {
-	log.WithFields(log.Fields{
+	log := log.WithFields(log.Fields{
 		"func":     "LoadConfig",
 		"filename": filename,
-	}).Infoln("load config file")
+	})
+	log.Infoln("load config file")
 
-	config, err := afero.ReadFile(c.fs, filename)
-	if err != nil {
-		return errors.Wrap(err, "failed to read config file")
+	if ok, _ := afero.Exists(c.fs, "/configs/config.json"); !ok {
+		log.Warningln("no config was loaded, file not exist")
+		return nil
 	}
 
+	config, _ := afero.ReadFile(c.fs, filename)
 	e := []Entry{}
-	if err = json.Unmarshal([]byte(config), &e); err != nil {
+	if err := json.Unmarshal([]byte(config), &e); err != nil {
 		return errors.Wrap(err, "failed to parse JSON data from config file")
 	}
 
-	if err = c.AddJobs(e); err != nil {
+	if err := c.AddJobs(e); err != nil {
 		return errors.Wrap(err, "failed to add jobs entries fron config file")
 	}
 	return nil
@@ -115,6 +117,10 @@ func (c *Cron) LoadConfig(filename string) error {
 func (c *Cron) Run(cs chan os.Signal, sigs ...os.Signal) error {
 	if cs == nil {
 		return errors.New("channel is required")
+	}
+
+	if err := c.LoadConfig("/configs/config.json"); err != nil {
+		return err
 	}
 
 	c.Start()
