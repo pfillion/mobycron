@@ -30,7 +30,7 @@ You can use the [mobycron library](https://github.com/pfillion/mobycron) directl
 
 ## Configuration file
 
-You can mount directly the ```config.json``` file or use docker configuration to schedule all job like a crontab file. See the [exemples](https://github.com/pfillion/mobycron/tree/master/exemples) in the source code or below.
+You can mount directly the ```config.json``` file or use docker configuration to schedule all job like a crontab file. See the [examples](https://github.com/pfillion/mobycron/tree/master/examples) in the source code or below.
 
 * /configs/config.json
 
@@ -52,7 +52,7 @@ You can mount directly the ```config.json``` file or use docker configuration to
             "-S",
             "-X",
             "GET",
-            "http://exemple.com"
+            "http://example.com"
         ]
     },
     {
@@ -91,7 +91,7 @@ As an alternative to passing sensitive information via environment variables, `_
 
 ## Docker compose
 
-See the docker swarm [exemples](https://github.com/pfillion/mobycron/tree/master/exemples) in the source code or below.
+See the docker swarm [examples](https://github.com/pfillion/mobycron/tree/master/examples) in the source code or below.
 
 ```yml
 version: '3.6'

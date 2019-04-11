@@ -15,7 +15,7 @@
             "-S",
             "-X",
             "GET",
-            "http://exemple.com"            
+            "https://example.com"            
         ]
     },
     {
