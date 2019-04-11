@@ -6,7 +6,7 @@
 [![microbadger image](https://images.microbadger.com/badges/version/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own version badge on microbadger.com")
 [![microbadger image](https://images.microbadger.com/badges/commit/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
 
-A simple cron deamon for docker written in go. It use the [robfig cron library](https://github.com/robfig/cron) engine and all cron jobs can be confgurated by a JSON file.
+A simple cron deamon for docker written in go. It use the [robfig cron library v3](https://github.com/robfig/cron/tree/v3) engine and all cron jobs can be confgurated by a JSON file.
 
 The docker image include the official backup tool [restic](https://github.com/restic/restic). This may be usefull for schedule prune job and cleanup backup snaphots directly on the restic server hosting REST repositories for optimal performance.
 
@@ -37,7 +37,7 @@ You can mount directly the ```config.json``` file or use docker configuration to
 ```json
 [
     {
-        "schedule": "0/2 * * * * *",
+        "schedule": "* * * * *",
         "command": "bash",
         "args": [
             "-c",
@@ -45,7 +45,7 @@ You can mount directly the ```config.json``` file or use docker configuration to
         ]
     },
     {
-        "schedule": "0/5 * * * * *",
+        "schedule": "0/2 * * * *",
         "command": "curl",
         "args": [
             "-s",
@@ -56,7 +56,7 @@ You can mount directly the ```config.json``` file or use docker configuration to
         ]
     },
     {
-        "schedule": "0 0 3 ? * *",
+        "schedule": "0 3 * * *",
         "command": "/usr/bin/restic",
         "args": [
             "-r",
@@ -74,8 +74,8 @@ You can mount directly the ```config.json``` file or use docker configuration to
 
 This file will schedule three cron job.
 
-* The first one will replace ```$NAME``` by the environnement variable configured in the container and print ```Hello``` + ```$NAME``` every 2 seconds.
-* The second will execute a ```curl``` command every 5 seconds. It may be usefull when you need to call any simple **webcron** or **webhook** URL like with [EasyCron](https://www.easycron.com)
+* The first one will replace ```$NAME``` by the environnement variable configured in the container and print ```Hello``` + ```$NAME``` every minutes.
+* The second will execute a ```curl``` command every 2 minutes. It may be usefull when you need to call any simple **webcron** or **webhook** URL like with [EasyCron](https://www.easycron.com)
 
 * The last one will forget and prune all restic snapshot older than 7 days every day at 3 AM. It use the secret environnement variable ```$REPO__FILE``` for telling to restic the repository to use and a password file ```/configs/passwd```mounted in the container.
 

@@ -8,14 +8,14 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+	cron "gopkg.in/robfig/cron.v3"
 )
 
 // Runner is an interface for testing robfig/cron
 type Runner interface {
-	AddJob(spec string, cmd cron.Job) error
+	AddJob(spec string, cmd cron.Job) (cron.EntryID, error)
 	Start()
 	Stop()
 }
@@ -68,7 +68,7 @@ func (c *Cron) AddJob(entry *Entry) error {
 		return errors.New("command is required")
 	}
 
-	if err := c.runner.AddJob(entry.Schedule, &Job{entry.Command, entry.Args, c}); err != nil {
+	if _, err := c.runner.AddJob(entry.Schedule, &Job{entry.Command, entry.Args, c}); err != nil {
 		return errors.Wrap(err, "failed to add job in cron")
 	}
 

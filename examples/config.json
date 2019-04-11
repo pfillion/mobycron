@@ -1,6 +1,6 @@
 [
     {
-        "schedule": "0/2 * * * * *",
+        "schedule": "* * * * *",
         "command": "bash",
         "args": [
             "-c",
@@ -8,7 +8,7 @@
         ]
     },
     {
-        "schedule": "0/5 * * * * *",
+        "schedule": "0/2 * * * *",
         "command": "curl",
         "args": [
             "-s",
@@ -19,7 +19,7 @@
         ]
     },
     {
-        "schedule": "0 0 3 ? * *",
+        "schedule": "0 3 * * *",
         "command": "/usr/bin/restic",
         "args": [
             "-r",

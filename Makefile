@@ -31,16 +31,19 @@ bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
 go-get: ## Get external packages
-	go get -u -v golang.org/x/lint/golint
-	go get -u -v github.com/robfig/cron
-	go get -u -v github.com/sirupsen/logrus
-	go get -u -v github.com/pkg/errors
-	go get -u -v github.com/spf13/afero
-	go get -u -v gotest.tools/assert
+	# go get -u -v github.com/docker/docker/client
 	go get -u -v github.com/golang/mock/gomock
+	go get -u -v github.com/pkg/errors
+	go get -u -v github.com/sirupsen/logrus
+	go get -u -v github.com/spf13/afero
+	go get -u -v golang.org/x/lint/golint
+	go get -u -v gopkg.in/robfig/cron.v3
+	go get -u -v gotest.tools/assert
 
 go-mock: ## Generate mock file
-	mockgen -source=$(ROOT_FOLDER)/cron/cron.go -destination=$(ROOT_FOLDER)/cron/cron_mock.go -package=cron
+	mockgen -source=$(ROOT_FOLDER)/pkg/cron/cron.go -destination=$(ROOT_FOLDER)/pkg/cron/cron_mock.go -package=cron
+	# mockgen -source=$(ROOT_FOLDER)/pkg/events/handler.go -destination=$(ROOT_FOLDER)/pkg/events/handler_mock.go -package=events
+	# mockgen -destination=$(ROOT_FOLDER)/pkg/events/APIClient_mock.go -package=events github.com/docker/docker/client APIClient
 
 go-build: go-get ## Build go app
 	golint -set_exit_status ./...
@@ -83,7 +86,7 @@ docker-shell: ## Run shell command in the container
 	docker run --rm --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) -it --entrypoint "" $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION) /bin/sh
 
 docker-run: ## Run the container
-	docker run --rm --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION)
+	docker run --rm --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) $(PORTS) -v /var/run/docker.sock:/var/run/docker.sock -v $(ROOT_FOLDER)/tests/configs/config.json:/configs/config.json $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION)
 
 docker-start: ## Run the container in background
 	docker run -d --name $(CONTAINER_NAME)-$(CONTAINER_INSTANCE) $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(IMAGE_NAME):$(VERSION)

@@ -15,7 +15,7 @@ function teardown(){
 @test "mobycron" {
     # Given a json config, when starting the container, then the job is scheduled and executed
     docker run -d -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
-	sleep 3
+	sleep 65
     run docker logs ${CONTAINER_NAME}
 	assert_output --regexp 'job completed successfully.*Hello Joe'
 }

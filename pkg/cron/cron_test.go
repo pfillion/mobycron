@@ -10,6 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+	cron "gopkg.in/robfig/cron.v3"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 )
@@ -100,7 +101,7 @@ func TestAddJob(t *testing.T) {
 			name:  "CronRunner.AddJob return error",
 			entry: &Entry{"3 * * * * *", "/bin/bash", nil},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(fmt.Errorf("a error"))
+				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(1), fmt.Errorf("a error"))
 			},
 			checks: check(
 				hasError("a error"),
@@ -194,7 +195,7 @@ func TestAddJobs(t *testing.T) {
 			name:    "AddJob return error",
 			entries: []Entry{{"3 * * * * *", "echo", []string{"1"}}},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(fmt.Errorf("a error"))
+				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(1), fmt.Errorf("a error"))
 			},
 			checks: check(
 				hasError("a error"),
