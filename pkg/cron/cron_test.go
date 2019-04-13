@@ -348,16 +348,13 @@ func TestStop(t *testing.T) {
 }
 
 func TestNewCron(t *testing.T) {
-	// Arrange
-	fs := afero.NewOsFs()
-
 	// Act
-	c := NewCron(fs)
+	c := NewCron()
 
 	// Assert
 	assert.Assert(t, c.runner != nil)
 	assert.Assert(t, c.sync != nil)
-	assert.Assert(t, c.fs == fs)
+	assert.Assert(t, c.fs != nil)
 }
 
 func TestRun(t *testing.T) {
@@ -463,7 +460,8 @@ func TestRun(t *testing.T) {
 				}()
 			}
 
-			c := NewCron(fs)
+			c := NewCron()
+			c.fs = fs
 
 			// Act
 			err := c.Run(tt.args.c, tt.args.sig...)

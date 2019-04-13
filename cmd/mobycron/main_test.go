@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 )
@@ -89,9 +88,6 @@ func TestMain(t *testing.T) {
 			defer func() {
 				exiter = oldExiter
 			}()
-
-			// Fake config file
-			fs = afero.NewMemMapFs()
 
 			// Send terminating signal
 			osChan = tt.osChan

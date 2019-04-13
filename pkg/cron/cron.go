@@ -43,8 +43,8 @@ type Entry struct {
 }
 
 // NewCron return a new Cron job runner.
-func NewCron(fs afero.Fs) *Cron {
-	return &Cron{cron.New(), &sync.WaitGroup{}, fs}
+func NewCron() *Cron {
+	return &Cron{cron.New(), &sync.WaitGroup{}, afero.NewOsFs()}
 }
 
 // AddJob adds a Entry to the Cron to be run on the given schedule.
