@@ -31,21 +31,23 @@ bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
 go-get: ## Get external packages
-	# go get -u -v github.com/docker/docker/client
+	go get -u -v github.com/docker/docker/client
 	go get -u -v github.com/golang/mock/gomock
 	go get -u -v github.com/pkg/errors
 	go get -u -v github.com/sirupsen/logrus
 	go get -u -v github.com/spf13/afero
+	go get -u -v github.com/urfave/cli
 	go get -u -v golang.org/x/lint/golint
 	go get -u -v gopkg.in/robfig/cron.v3
 	go get -u -v gotest.tools/assert
 
 go-mock: ## Generate mock file
+	mockgen -source=$(ROOT_FOLDER)/cmd/mobycron/main.go -destination=$(ROOT_FOLDER)/cmd/mobycron/main_mock.go -package=main
 	mockgen -source=$(ROOT_FOLDER)/pkg/cron/cron.go -destination=$(ROOT_FOLDER)/pkg/cron/cron_mock.go -package=cron
 	# mockgen -source=$(ROOT_FOLDER)/pkg/events/handler.go -destination=$(ROOT_FOLDER)/pkg/events/handler_mock.go -package=events
 	# mockgen -destination=$(ROOT_FOLDER)/pkg/events/APIClient_mock.go -package=events github.com/docker/docker/client APIClient
 
-go-build: go-get ## Build go app
+go-build: ## Build go app
 	golint -set_exit_status ./...
 	go vet -v ./...
 	GOOS=${GOOS} GOARCH=${GOARCH} go build -o $(BIN_FOLDER)/$(APP_NAME) -v $(APP_FOLDER)
@@ -100,7 +102,7 @@ docker-rm: ## Remove the container
 docker-test: ## Run docker container tests
 	container-structure-test test --image $(NS)/$(IMAGE_NAME):$(VERSION) --config tests/config.yaml
 
-build: go-build docker-build ## Build all
+build: go-get go-build docker-build ## Build all
 
 rebuild: go-rebuild docker-rebuild ## Rebuild all
 

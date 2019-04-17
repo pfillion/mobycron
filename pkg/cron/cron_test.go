@@ -3,8 +3,6 @@ package cron
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"syscall"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -46,7 +44,7 @@ func TestAddJob(t *testing.T) {
 		checks []checkFunc
 	}{
 		{
-			name:  "valid cron parameters",
+			name:  "valid job",
 			entry: &Entry{"3 * * * * *", "/bin/bash", []string{"-c echo 1"}},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * * *", &Job{"/bin/bash", []string{"-c echo 1"}, c})
@@ -57,21 +55,21 @@ func TestAddJob(t *testing.T) {
 			),
 		},
 		{
-			name:  "empty schedule",
+			name:  "job with empty schedule",
 			entry: &Entry{"", "/bin/bash", []string{"-c echo 1"}},
 			checks: check(
 				hasError("schedule is required"),
 			),
 		},
 		{
-			name:  "empty command",
+			name:  "job with empty command",
 			entry: &Entry{"3 * * * * *", "", []string{"-c echo 1"}},
 			checks: check(
 				hasError("command is required"),
 			),
 		},
 		{
-			name:  "empty args",
+			name:  "job with empty args",
 			entry: &Entry{"3 * * * * *", "/bin/bash", []string{""}},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), &Job{"/bin/bash", []string{""}, c})
@@ -81,7 +79,7 @@ func TestAddJob(t *testing.T) {
 			),
 		},
 		{
-			name:  "nil args",
+			name:  "job with nil args",
 			entry: &Entry{"3 * * * * *", "/bin/bash", nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * * *", &Job{"/bin/bash", nil, c})
@@ -355,123 +353,6 @@ func TestNewCron(t *testing.T) {
 	assert.Assert(t, c.runner != nil)
 	assert.Assert(t, c.sync != nil)
 	assert.Assert(t, c.fs != nil)
-}
-
-func TestRun(t *testing.T) {
-	type checkFunc func(*testing.T, string, error)
-	check := func(fns ...checkFunc) []checkFunc { return fns }
-
-	hasOutput := func(want string) checkFunc {
-		return func(t *testing.T, out string, err error) {
-			assert.Assert(t, is.Contains(out, want))
-		}
-	}
-
-	hasError := func(want string) checkFunc {
-		return func(t *testing.T, out string, err error) {
-			assert.Assert(t, is.ErrorContains(err, want))
-		}
-	}
-
-	hasNilError := func() checkFunc {
-		return func(t *testing.T, out string, err error) {
-			assert.NilError(t, err)
-		}
-	}
-
-	type args struct {
-		c   chan os.Signal
-		sig []os.Signal
-	}
-
-	tests := []struct {
-		name     string
-		args     *args
-		sing     os.Signal
-		filename string
-		config   string
-		checks   []checkFunc
-	}{
-		{
-			name: "stop when signal match",
-			args: &args{make(chan os.Signal), []os.Signal{syscall.SIGINT}},
-			sing: syscall.SIGINT,
-			checks: check(
-				hasNilError(),
-				hasOutput("start cron"),
-				hasOutput("cron is running and waiting signal for stop"),
-				hasOutput("cron is stopped, all jobs are completed"),
-			),
-		},
-		{
-			name: "stop when any signal",
-			args: &args{make(chan os.Signal), []os.Signal{}},
-			sing: syscall.SIGINT,
-			checks: check(
-				hasNilError(),
-				hasOutput("start cron"),
-				hasOutput("cron is running and waiting signal for stop"),
-				hasOutput("cron is stopped, all jobs are completed"),
-			),
-		},
-		{
-			name: "nil sig",
-			args: &args{make(chan os.Signal), nil},
-			sing: syscall.SIGINT,
-			checks: check(
-				hasNilError(),
-				hasOutput("start cron"),
-				hasOutput("cron is running and waiting signal for stop"),
-				hasOutput("cron is stopped, all jobs are completed"),
-			),
-		},
-		{
-			name: "nil ch",
-			args: &args{nil, []os.Signal{syscall.SIGINT}},
-			checks: check(
-				hasError("channel is required"),
-			),
-		},
-		{
-			name:     "error on load configuration",
-			args:     &args{make(chan os.Signal), []os.Signal{syscall.SIGINT}},
-			filename: "/configs/config.json",
-			config:   `error`,
-			checks: check(
-				hasError("failed to parse JSON data from config file"),
-			),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			out := &bytes.Buffer{}
-			log.SetOutput(out)
-
-			fs := afero.NewMemMapFs()
-			if tt.filename != "" {
-				afero.WriteFile(fs, tt.filename, []byte(tt.config), 0640)
-			}
-
-			if tt.args.c != nil {
-				go func() {
-					tt.args.c <- tt.sing
-				}()
-			}
-
-			c := NewCron()
-			c.fs = fs
-
-			// Act
-			err := c.Run(tt.args.c, tt.args.sig...)
-
-			// Assert
-			for _, check := range tt.checks {
-				check(t, out.String(), err)
-			}
-		})
-	}
 }
 
 func TestLoadConfig(t *testing.T) {

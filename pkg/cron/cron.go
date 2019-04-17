@@ -2,8 +2,6 @@ package cron
 
 import (
 	"encoding/json"
-	"os"
-	"os/signal"
 	"strings"
 	"sync"
 
@@ -63,7 +61,6 @@ func (c *Cron) AddJob(entry *Entry) error {
 	if entry.Schedule == "" {
 		return errors.New("schedule is required")
 	}
-
 	if entry.Command == "" {
 		return errors.New("command is required")
 	}
@@ -110,31 +107,6 @@ func (c *Cron) LoadConfig(filename string) error {
 	if err := c.AddJobs(e); err != nil {
 		return errors.Wrap(err, "failed to add jobs entries fron config file")
 	}
-	return nil
-}
-
-// Run the Cron scheduler and wait for specific os.Signal to stop.
-func (c *Cron) Run(cs chan os.Signal, sigs ...os.Signal) error {
-	if cs == nil {
-		return errors.New("channel is required")
-	}
-
-	if err := c.LoadConfig("/configs/config.json"); err != nil {
-		return err
-	}
-
-	c.Start()
-
-	log.WithFields(log.Fields{
-		"func":   "Run",
-		"signal": sigs,
-	}).Infoln("cron is running and waiting signal for stop")
-
-	signal.Notify(cs, sigs...)
-	<-cs
-
-	c.Stop()
-
 	return nil
 }
 

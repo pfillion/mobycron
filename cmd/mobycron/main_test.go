@@ -2,74 +2,178 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	"errors"
 	"os"
-	"strings"
 	"syscall"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 )
 
+func TestInitApp(t *testing.T) {
+	a := cli.NewApp()
+	a.Before = initApp
+	a.Action = func(ctx *cli.Context) error { return nil }
+	os.Args = []string{"mobycron.test"}
+
+	// Act
+	err := a.Run(os.Args)
+
+	// Assert
+	assert.NilError(t, err)
+	assert.Assert(t, app.cron != nil)
+	assert.Assert(t, app.osChan != nil)
+	assert.Assert(t, app.handler != nil)
+	assert.Assert(t, log.StandardLogger().Out == os.Stdout)
+	assert.Assert(t, log.GetLevel() == log.InfoLevel)
+	_, ok := log.StandardLogger().Formatter.(*log.JSONFormatter)
+	assert.Assert(t, ok)
+}
+
+func TestInitAppError(t *testing.T) {
+	a := cli.NewApp()
+	a.Before = initApp
+	a.Action = func(ctx *cli.Context) error { return nil }
+	os.Args = []string{"mobycron.test"}
+
+	os.Setenv("DOCKER_HOST", "bad docker host")
+	defer os.Unsetenv("DOCKER_HOST")
+
+	// Act
+	err := a.Run(os.Args)
+
+	// Assert
+	assert.ErrorContains(t, err, "unable to parse docker host")
+}
+
 func TestMain(t *testing.T) {
-	type checkFunc func(*testing.T, string, int)
+	os.Args = []string{"mobycron"}
+	var out = &bytes.Buffer{}
+	exitCode := 0
+
+	before = func(ctx *cli.Context) error {
+		log.SetOutput(out)
+		return nil
+	}
+	action = func(ctx *cli.Context) error {
+		log.Infoln("completed")
+		return nil
+	}
+
+	// Act
+	main()
+
+	// Assert
+	assert.Assert(t, is.Equal(0, exitCode))
+	assert.Assert(t, is.Contains(out.String(), "completed"))
+}
+
+func TestMainError(t *testing.T) {
+	os.Args = []string{"mobycron"}
+	var out = &bytes.Buffer{}
+	exitCode := 0
+
+	before = func(ctx *cli.Context) error {
+		log.SetOutput(out)
+		log.StandardLogger().ExitFunc = func(code int) {
+			exitCode = code
+		}
+		return nil
+	}
+	action = func(ctx *cli.Context) error {
+		return errors.New("error in main app")
+	}
+
+	// Act
+	main()
+
+	// Assert
+	assert.Assert(t, is.Equal(1, exitCode))
+	assert.Assert(t, is.Contains(out.String(), "fatal"))
+	assert.Assert(t, is.Contains(out.String(), "error in main app"))
+}
+
+func TestStartApp(t *testing.T) {
+	type checkFunc func(*testing.T, string, error)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
+	type mockFunc func(*MockCron, *MockHandler)
+
 	hasOutput := func(want string) checkFunc {
-		return func(t *testing.T, out string, exitCode int) {
+		return func(t *testing.T, out string, err error) {
 			assert.Assert(t, is.Contains(out, want))
 		}
 	}
 
-	hasExitCode := func(want int) checkFunc {
-		return func(t *testing.T, out string, exitCode int) {
-			assert.Assert(t, is.Equal(exitCode, want))
+	hasError := func(want string) checkFunc {
+		return func(t *testing.T, out string, err error) {
+			assert.Assert(t, is.ErrorContains(err, want))
 		}
 	}
 
-	hasLogLevel := func(want log.Level) checkFunc {
-		return func(t *testing.T, out string, exitCode int) {
-			assert.Assert(t, is.Equal(log.GetLevel(), want))
-		}
-	}
-
-	hasJSONOutput := func() checkFunc {
-		return func(t *testing.T, out string, exitCode int) {
-			for i, line := range strings.Split(out, "\n") {
-				if line != "" {
-					var js interface{}
-					assert.NilError(t, json.Unmarshal([]byte(line), &js), "line %d: %s", i, line)
-				}
-			}
+	hasNilError := func() checkFunc {
+		return func(t *testing.T, out string, err error) {
+			assert.NilError(t, err)
 		}
 	}
 
 	tests := []struct {
 		name   string
 		osChan chan os.Signal
+		sing   os.Signal
+		mock   mockFunc
 		checks []checkFunc
 	}{
 		{
 			name:   "run",
 			osChan: make(chan os.Signal),
+			sing:   syscall.SIGINT,
+			mock: func(c *MockCron, h *MockHandler) {
+				c.EXPECT().LoadConfig(gomock.Any()).Return(nil)
+				// h.EXPECT().Scan()
+				// h.EXPECT().Listen()
+				c.EXPECT().Start()
+				c.EXPECT().Stop()
+			},
 			checks: check(
-				hasExitCode(0),
-				hasLogLevel(log.InfoLevel),
-				hasJSONOutput(),
-				hasOutput("cron is stopped, all jobs are completed"),
+				hasNilError(),
+				hasOutput("cron is running and waiting signal for stop"),
 			),
 		},
 		{
-			name:   "error on run",
-			osChan: nil,
+			name: "LoadConfig in error",
+			mock: func(c *MockCron, h *MockHandler) {
+				c.EXPECT().LoadConfig("/configs/config.json").Return(errors.New("config error"))
+			},
 			checks: check(
-				hasExitCode(1),
-				hasJSONOutput(),
-				hasOutput("channel is required"),
+				hasError("config error"),
 			),
 		},
+		// {
+		// 	name: "Scan in error",
+		// 	mock: func(c *MockCron, h *MockHandler) {
+		// 		c.EXPECT().LoadConfig(gomock.Any())
+		// 		h.EXPECT().Scan().Return(errors.New("scan error"))
+		// 	},
+		// 	checks: check(
+		// 		hasError("scan error"),
+		// 	),
+		// },
+		// {
+		// 	name: "Listen in error",
+		// 	mock: func(c *MockCron, h *MockHandler) {
+		// 		c.EXPECT().LoadConfig(gomock.Any())
+		// 		h.EXPECT().Scan()
+		// 		h.EXPECT().Listen().Return(errors.New("listen error"))
+		// 	},
+		// 	checks: check(
+		// 		hasError("listen error"),
+		// 	),
+		// },
 	}
 
 	for _, tt := range tests {
@@ -77,30 +181,42 @@ func TestMain(t *testing.T) {
 			// Arrange
 			// Replace log output
 			var out = &bytes.Buffer{}
-			output = out
-
-			// Replace exiter func in real code by a fake one
-			var exitCode int
-			oldExiter := exiter
-			exiter = func(code int) {
-				exitCode = code
-			}
-			defer func() {
-				exiter = oldExiter
-			}()
+			log.SetOutput(out)
 
 			// Send terminating signal
-			osChan = tt.osChan
 			go func() {
-				tt.osChan <- syscall.SIGTERM
+				tt.osChan <- tt.sing
 			}()
 
+			// Mock
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mc := NewMockCron(ctrl)
+			mh := NewMockHandler(ctrl)
+			if tt.mock != nil {
+				tt.mock(mc, mh)
+			}
+
+			// Fake app
+			a := cli.NewApp()
+			a.Before = func(ctx *cli.Context) error {
+				app = cronApp{
+					cron:    mc,
+					osChan:  tt.osChan,
+					handler: mh,
+				}
+
+				return nil
+			}
+			a.Action = startApp
+			os.Args = []string{"mobycron.test"}
+
 			// Act
-			main()
+			err := a.Run(os.Args)
 
 			// Assert
 			for _, check := range tt.checks {
-				check(t, out.String(), exitCode)
+				check(t, out.String(), err)
 			}
 		})
 	}
