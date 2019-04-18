@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Cron keeps track of any number of entries, invoking the associated Job as
+// Cron keeps track of any number of jobs, invoking the associated Job as
 // specified by the schedule. It may be started and stopped.
 type Cron interface {
 	LoadConfig(filename string) error
@@ -72,7 +72,7 @@ func startApp(ctx *cli.Context) error {
 	app.cron.Start()
 
 	log.WithFields(log.Fields{
-		"func":   "Run",
+		"func":   "main.startApp",
 		"signal": sig,
 	}).Infoln("cron is running and waiting signal for stop")
 

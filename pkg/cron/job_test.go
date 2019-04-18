@@ -186,7 +186,7 @@ func TestJobRun(t *testing.T) {
 			}
 
 			c := &Cron{nil, s, fs}
-			j := &Job{tt.command, tt.args, c}
+			j := &Job{"3 * * * * *", tt.command, tt.args, c}
 
 			// Act
 			j.Run()

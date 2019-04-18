@@ -39,15 +39,15 @@ func TestAddJob(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		entry  *Entry
+		job    *Job
 		mock   mockFunc
 		checks []checkFunc
 	}{
 		{
-			name:  "valid job",
-			entry: &Entry{"3 * * * * *", "/bin/bash", []string{"-c echo 1"}},
+			name: "valid job",
+			job:  &Job{"3 * * * *", "/bin/bash", []string{"-c echo 1"}, nil},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("3 * * * * *", &Job{"/bin/bash", []string{"-c echo 1"}, c})
+				r.EXPECT().AddJob("3 * * * *", &Job{"3 * * * *", "/bin/bash", []string{"-c echo 1"}, c})
 			},
 			checks: check(
 				hasOutput("add job to cron"),
@@ -55,49 +55,49 @@ func TestAddJob(t *testing.T) {
 			),
 		},
 		{
-			name:  "job with empty schedule",
-			entry: &Entry{"", "/bin/bash", []string{"-c echo 1"}},
+			name: "job with empty schedule",
+			job:  &Job{"", "/bin/bash", []string{"-c echo 1"}, nil},
 			checks: check(
 				hasError("schedule is required"),
 			),
 		},
 		{
-			name:  "job with empty command",
-			entry: &Entry{"3 * * * * *", "", []string{"-c echo 1"}},
+			name: "job with empty command",
+			job:  &Job{"3 * * * *", "", []string{"-c echo 1"}, nil},
 			checks: check(
 				hasError("command is required"),
 			),
 		},
 		{
-			name:  "job with empty args",
-			entry: &Entry{"3 * * * * *", "/bin/bash", []string{""}},
+			name: "job with empty args",
+			job:  &Job{"3 * * * *", "/bin/bash", []string{""}, nil},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob(gomock.Any(), &Job{"/bin/bash", []string{""}, c})
+				r.EXPECT().AddJob(gomock.Any(), &Job{"3 * * * *", "/bin/bash", []string{""}, c})
 			},
 			checks: check(
 				hasNilError(),
 			),
 		},
 		{
-			name:  "job with nil args",
-			entry: &Entry{"3 * * * * *", "/bin/bash", nil},
+			name: "job with nil args",
+			job:  &Job{"3 * * * *", "/bin/bash", nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("3 * * * * *", &Job{"/bin/bash", nil, c})
+				r.EXPECT().AddJob("3 * * * *", &Job{"3 * * * *", "/bin/bash", nil, c})
 			},
 			checks: check(
 				hasNilError(),
 			),
 		},
 		{
-			name:  "nil entry",
-			entry: nil,
+			name: "nil jon",
+			job:  nil,
 			checks: check(
-				hasError("entry is required"),
+				hasError("job is required"),
 			),
 		},
 		{
-			name:  "CronRunner.AddJob return error",
-			entry: &Entry{"3 * * * * *", "/bin/bash", nil},
+			name: "CronRunner.AddJob return error",
+			job:  &Job{"3 * * * *", "/bin/bash", nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(1), fmt.Errorf("a error"))
 			},
@@ -124,7 +124,7 @@ func TestAddJob(t *testing.T) {
 			}
 
 			// Act
-			err := c.AddJob(tt.entry)
+			err := c.AddJob(tt.job)
 
 			// Assert
 			for _, check := range tt.checks {
@@ -153,45 +153,45 @@ func TestAddJobs(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		entries []Entry
-		mock    mockFunc
-		checks  []checkFunc
+		name   string
+		jobs   []Job
+		mock   mockFunc
+		checks []checkFunc
 	}{
 		{
-			name:    "zero entries",
-			entries: []Entry{},
+			name: "zero jobs",
+			jobs: []Job{},
 			checks: check(
 				hasNilError(),
 			),
 		},
 		{
-			name:    "one entries",
-			entries: []Entry{{"3 * * * * *", "echo", []string{"1"}}},
+			name: "one job",
+			jobs: []Job{{"3 * * * *", "echo", []string{"1"}, nil}},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("3 * * * * *", &Job{"echo", []string{"1"}, c})
+				r.EXPECT().AddJob("3 * * * *", &Job{"3 * * * *", "echo", []string{"1"}, c})
 			},
 			checks: check(
 				hasNilError(),
 			),
 		},
 		{
-			name: "many entries",
-			entries: []Entry{
-				{"1 * * * * *", "echo1", []string{"1"}},
-				{"2 * * * * *", "echo2", []string{"2"}},
+			name: "many jobs",
+			jobs: []Job{
+				{"1 * * * *", "echo1", []string{"1"}, nil},
+				{"2 * * * *", "echo2", []string{"2"}, nil},
 			},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("1 * * * * *", &Job{"echo1", []string{"1"}, c})
-				r.EXPECT().AddJob("2 * * * * *", &Job{"echo2", []string{"2"}, c})
+				r.EXPECT().AddJob("1 * * * *", &Job{"1 * * * *", "echo1", []string{"1"}, c})
+				r.EXPECT().AddJob("2 * * * *", &Job{"2 * * * *", "echo2", []string{"2"}, c})
 			},
 			checks: check(
 				hasNilError(),
 			),
 		},
 		{
-			name:    "AddJob return error",
-			entries: []Entry{{"3 * * * * *", "echo", []string{"1"}}},
+			name: "AddJob return error",
+			jobs: []Job{{"3 * * * *", "echo", []string{"1"}, nil}},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(1), fmt.Errorf("a error"))
 			},
@@ -200,10 +200,10 @@ func TestAddJobs(t *testing.T) {
 			),
 		},
 		{
-			name:    "nil entries",
-			entries: nil,
+			name: "nil jobs",
+			jobs: nil,
 			checks: check(
-				hasError("entries is required"),
+				hasError("jobs is required"),
 			),
 		},
 	}
@@ -224,7 +224,7 @@ func TestAddJobs(t *testing.T) {
 			}
 
 			// Act
-			err := c.AddJobs(tt.entries)
+			err := c.AddJobs(tt.jobs)
 
 			// Assert
 			for _, check := range tt.checks {
@@ -387,11 +387,11 @@ func TestLoadConfig(t *testing.T) {
 		checks   []checkFunc
 	}{
 		{
-			name:     "one entry",
+			name:     "one job",
 			filename: "/configs/config.json",
 			config: `[
 						{
-							"schedule": "0/2 * * 12 * *",
+							"schedule": "0/2 * * 12 *",
 							"command": "echo",
 							"args": [
 								"boby"
@@ -399,7 +399,7 @@ func TestLoadConfig(t *testing.T) {
 						}
 					]`,
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("0/2 * * 12 * *", &Job{"echo", []string{"boby"}, c})
+				r.EXPECT().AddJob("0/2 * * 12 *", &Job{"0/2 * * 12 *", "echo", []string{"boby"}, c})
 			},
 			checks: check(
 				hasNilError(),
@@ -407,18 +407,18 @@ func TestLoadConfig(t *testing.T) {
 			),
 		},
 		{
-			name:     "many entries",
+			name:     "many jobs",
 			filename: "/configs/config.json",
 			config: `[
 						{
-							"schedule": "0/2 * * 12 * *",
+							"schedule": "0/2 * * 12 *",
 							"command": "command1",
 							"args": [
 								"arg1"
 							]
 						},
 						{
-							"schedule": "5 5 * * * *",
+							"schedule": "5 5 * * *",
 							"command": "command2",
 							"args": [
 								"arg2"
@@ -426,8 +426,8 @@ func TestLoadConfig(t *testing.T) {
 						}
 					]`,
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("0/2 * * 12 * *", &Job{"command1", []string{"arg1"}, c})
-				r.EXPECT().AddJob("5 5 * * * *", &Job{"command2", []string{"arg2"}, c})
+				r.EXPECT().AddJob("0/2 * * 12 *", &Job{"0/2 * * 12 *", "command1", []string{"arg1"}, c})
+				r.EXPECT().AddJob("5 5 * * *", &Job{"5 5 * * *", "command2", []string{"arg2"}, c})
 			},
 			checks: check(
 				hasNilError(),
@@ -454,7 +454,7 @@ func TestLoadConfig(t *testing.T) {
 			),
 		},
 		{
-			name:     "invalid entry",
+			name:     "invalid job",
 			filename: "/configs/config.json",
 			config: `[
 						{
@@ -466,7 +466,7 @@ func TestLoadConfig(t *testing.T) {
 						}
 					]`,
 			checks: check(
-				hasError("failed to add jobs entries fron config file"),
+				hasError("failed to add jobs fron config file"),
 			),
 		},
 	}

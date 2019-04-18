@@ -5,9 +5,8 @@
 package main
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockCron is a mock of Cron interface

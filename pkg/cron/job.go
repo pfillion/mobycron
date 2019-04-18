@@ -9,19 +9,21 @@ import (
 	"github.com/spf13/afero"
 )
 
-// Job run a command with specified args.
+// Job run a command with specified args on a schedule.
 type Job struct {
-	command string
-	args    []string
-	cron    *Cron
+	Schedule string   `json:"schedule"`
+	Command  string   `json:"command"`
+	Args     []string `json:"args"`
+	cron     *Cron
 }
 
 // Run a Job and log the output.
 func (j *Job) Run() {
 	log := log.WithFields(log.Fields{
-		"func":    "Run",
-		"command": j.command,
-		"args":    strings.Join(j.args, " "),
+		"func":     "Job.Run",
+		"schedule": j.Schedule,
+		"command":  j.Command,
+		"args":     strings.Join(j.Args, " "),
 	})
 
 	j.cron.sync.Add(1)
@@ -42,12 +44,12 @@ func (j *Job) Run() {
 	}
 
 	// Expand env in all args
-	args := make([]string, len(j.args))
-	for i, arg := range j.args {
+	args := make([]string, len(j.Args))
+	for i, arg := range j.Args {
 		args[i] = os.Expand(arg, secretMapper)
 	}
 
-	cmd := exec.Command(os.Expand(j.command, secretMapper), args...)
+	cmd := exec.Command(os.Expand(j.Command, secretMapper), args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.WithField("output", string(out)).WithError(err).Errorln("job completed with error")
 	} else {
