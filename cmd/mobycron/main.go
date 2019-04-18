@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	"github.com/pfillion/mobycron/pkg/cron"
-	"github.com/pfillion/mobycron/pkg/events"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -38,15 +37,15 @@ var app cronApp
 func initApp(ctx *cli.Context) error {
 	cron := cron.NewCron()
 	osChan := make(chan os.Signal)
-	handler, err := events.NewHandler(cron)
-	if err != nil {
-		return err
-	}
+	// handler, err := events.NewHandler(cron)
+	// if err != nil {
+	// 	return err
+	// }
 
 	app = cronApp{
-		cron:    cron,
-		osChan:  osChan,
-		handler: handler,
+		cron:   cron,
+		osChan: osChan,
+		// handler: handler,
 	}
 
 	log.SetOutput(os.Stdout)
