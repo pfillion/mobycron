@@ -29,6 +29,7 @@ type Cronner interface {
 
 // DockerClient is the client for docker
 type DockerClient interface {
+	Close() error
 	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
 	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
 	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)

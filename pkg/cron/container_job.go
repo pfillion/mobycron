@@ -2,6 +2,7 @@ package cron
 
 import (
 	context "context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,14 +29,15 @@ func (j *ContainerJob) Run() {
 		"func":            "ContainerJob.Run",
 		"schedule":        j.Schedule,
 		"action":          j.Action,
+		"timeout":         j.Timeout,
 		"command":         j.Command,
 		"container.ID":    j.Container.ID,
 		"container.Names": strings.Join(j.Container.Names, ","),
 	})
-	// TODO: manage Timeout from ContainerJob to override the default
 
 	j.cron.sync.Add(1)
 	defer j.cron.sync.Done()
+	defer j.cli.Close()
 	var err error
 
 	switch j.Action {
@@ -64,15 +66,11 @@ func (j *ContainerJob) start() error {
 }
 
 func (j *ContainerJob) restart() error {
-	// TODO: define timeout with label + default to 10s
-	timeout := 10 * time.Second
-	return j.cli.ContainerRestart(context.Background(), j.Container.ID, &timeout)
+	return j.cli.ContainerRestart(context.Background(), j.Container.ID, j.getTimeout())
 }
 
 func (j *ContainerJob) stop() error {
-	// TODO: define timeout with label + default to 10s
-	timeout := 10 * time.Second
-	return j.cli.ContainerStop(context.Background(), j.Container.ID, &timeout)
+	return j.cli.ContainerStop(context.Background(), j.Container.ID, j.getTimeout())
 }
 
 func (j *ContainerJob) exec() (string, error) {
@@ -119,4 +117,13 @@ func (j *ContainerJob) exec() (string, error) {
 	}
 
 	return out.String(), nil
+}
+
+func (j *ContainerJob) getTimeout() *time.Duration {
+	var value = 10
+	if j.Timeout != "" {
+		value, _ = strconv.Atoi(j.Timeout)
+	}
+	timeout := time.Duration(value) * time.Second
+	return &timeout
 }

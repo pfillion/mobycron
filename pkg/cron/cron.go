@@ -75,7 +75,6 @@ func (c *Cron) AddJobs(jobs []Job) error {
 
 // AddContainerJob add container job to the Cron to be run on the given schedule.
 func (c *Cron) AddContainerJob(job ContainerJob) error {
-	// TODO: Redesign log and evaluate if neccessary because of loggin error in handler loop
 	log.WithFields(log.Fields{
 		"func":            "Cron.AddContainerJob",
 		"schedule":        job.Schedule,

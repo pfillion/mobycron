@@ -84,9 +84,8 @@ func TestScan(t *testing.T) {
 		{
 			name: "zero container",
 			mock: func(sc *MockCronner, cli *MockDockerClient) {
-				cli.EXPECT().ContainerList(
-					gomock.Any(), gomock.Any(),
-				).Return([]types.Container{}, nil)
+				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return([]types.Container{}, nil)
+				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -121,9 +120,11 @@ func TestScan(t *testing.T) {
 					cron:      nil,
 					cli:       cli,
 				})
+				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
+				// TODO: cleanup
 				// hasLogField("func", "Handler.Scan"),
 				// hasLogField("msg", "scan containers for cron schedule"),
 			),
@@ -175,6 +176,7 @@ func TestScan(t *testing.T) {
 					cron:      nil,
 					cli:       cli,
 				})
+				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -184,6 +186,7 @@ func TestScan(t *testing.T) {
 			name: "ContainerList in error",
 			mock: func(sc *MockCronner, cli *MockDockerClient) {
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(nil, errors.New("ContainerList in error"))
+				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasError("ContainerList in error"),
@@ -195,6 +198,7 @@ func TestScan(t *testing.T) {
 				containers := []types.Container{{ID: "1"}}
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(containers, nil)
 				sc.EXPECT().AddContainerJob(gomock.Any()).Return(errors.New("AddContainerJob in error"))
+				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasLogError("AddContainerJob in error"),

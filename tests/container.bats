@@ -55,10 +55,9 @@ function teardown(){
 }
 
 @test "mobycron stop container" {
-    docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='stop' busybox sh -c ' sleep 100 && echo ''Do job'''
+    docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.timeout='1' -l mobycron.action='stop' busybox sh -c ' sleep 100 && echo ''Do job'''
     docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
-	sleep 15
-    # TODO: set timeout to 1s
+	sleep 3
     
     run docker logs ${CONTAINER_NAME}
 	assert_output --regexp 'container action completed successfully'
@@ -70,7 +69,6 @@ function teardown(){
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job''' busybox sleep 100
     docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	sleep 2
-    # TODO: set timeout to 1s
     
     run docker logs ${CONTAINER_NAME}
     assert_output --regexp 'Do job'
@@ -82,7 +80,6 @@ function teardown(){
     docker run -d --name ${DOER2_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job2''' busybox sleep 100
     docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	sleep 2
-    # TODO: set timeout to 1s
     
     run docker logs ${CONTAINER_NAME}
     assert_output --regexp 'Do job1'

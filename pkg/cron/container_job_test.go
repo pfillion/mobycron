@@ -54,6 +54,7 @@ func TestContainerJobRun(t *testing.T) {
 		name      string
 		schedule  string
 		action    string
+		timeout   string
 		command   string
 		container types.Container
 		mock      mockFunc
@@ -63,10 +64,12 @@ func TestContainerJobRun(t *testing.T) {
 			name:      "ContainerStart",
 			schedule:  "1 * * * 5",
 			action:    "start",
+			timeout:   "30",
 			container: types.Container{ID: "id1", Names: []string{"name1", "name2"}},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerStart(context.Background(), "id1", types.ContainerStartOptions{})
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -74,6 +77,7 @@ func TestContainerJobRun(t *testing.T) {
 				hasLogField("func", "ContainerJob.Run"),
 				hasLogField("schedule", "1 * * * 5"),
 				hasLogField("action", "start"),
+				hasLogField("timeout", "30"),
 				hasLogField("container.ID", "id1"),
 				hasLogField("container.Names", "name1,name2"),
 				hasLogField("msg", "container action completed successfully"),
@@ -86,6 +90,7 @@ func TestContainerJobRun(t *testing.T) {
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("container error"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -94,13 +99,30 @@ func TestContainerJobRun(t *testing.T) {
 			),
 		},
 		{
-			name:      "ContainerRestart",
+			name:      "ContainerRestart default timeout",
 			action:    "restart",
 			container: types.Container{ID: "id1"},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				timeout := 10 * time.Second
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerRestart(context.Background(), "id1", &timeout)
+				cli.EXPECT().Close()
+				s.EXPECT().Done()
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "ContainerRestart specific timeout",
+			action:    "restart",
+			timeout:   "30",
+			container: types.Container{ID: "id1"},
+			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
+				timeout := 30 * time.Second
+				s.EXPECT().Add(1)
+				cli.EXPECT().ContainerRestart(context.Background(), "id1", &timeout)
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -114,6 +136,7 @@ func TestContainerJobRun(t *testing.T) {
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerRestart(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("container error"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -121,13 +144,30 @@ func TestContainerJobRun(t *testing.T) {
 			),
 		},
 		{
-			name:      "ContainerStop",
+			name:      "ContainerStop default timeout",
 			action:    "stop",
 			container: types.Container{ID: "id1"},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				timeout := 10 * time.Second
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerStop(context.Background(), "id1", &timeout)
+				cli.EXPECT().Close()
+				s.EXPECT().Done()
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "ContainerStop specific timeout",
+			action:    "stop",
+			timeout:   "30",
+			container: types.Container{ID: "id1"},
+			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
+				timeout := 30 * time.Second
+				s.EXPECT().Add(1)
+				cli.EXPECT().ContainerStop(context.Background(), "id1", &timeout)
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -141,6 +181,7 @@ func TestContainerJobRun(t *testing.T) {
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerStop(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("container error"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -170,6 +211,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerExecCreate(context.Background(), "id1", types.ExecConfig{AttachStdout: true, AttachStderr: true, Cmd: []string{"echo", "'hello", "bob'"}}).Return(types.IDResponse{ID: "execid1"}, nil)
 				cli.EXPECT().ContainerExecAttach(context.Background(), "execid1", types.ExecStartCheck{}).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
 				cli.EXPECT().ContainerExecInspect(context.Background(), "execid1").Return(types.ContainerExecInspect{ExitCode: 0}, nil)
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -185,6 +227,7 @@ func TestContainerJobRun(t *testing.T) {
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, errors.New("error inspect"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -200,6 +243,7 @@ func TestContainerJobRun(t *testing.T) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, nil)
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{}, errors.New("error create"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -215,6 +259,7 @@ func TestContainerJobRun(t *testing.T) {
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, nil)
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: ""}, nil)
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -231,6 +276,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, nil)
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: "1"}, nil)
 				cli.EXPECT().ContainerExecAttach(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.HijackedResponse{}, errors.New("error attach"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -256,6 +302,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, nil)
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: "1"}, nil)
 				cli.EXPECT().ContainerExecAttach(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -285,6 +332,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: "1"}, nil)
 				cli.EXPECT().ContainerExecAttach(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
 				cli.EXPECT().ContainerExecInspect(gomock.Any(), gomock.Any()).Return(types.ContainerExecInspect{}, errors.New("error inspect"))
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -314,6 +362,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: "1"}, nil)
 				cli.EXPECT().ContainerExecAttach(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
 				cli.EXPECT().ContainerExecInspect(gomock.Any(), gomock.Any()).Return(types.ContainerExecInspect{ExitCode: 1}, nil)
+				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
 			checks: check(
@@ -344,6 +393,7 @@ func TestContainerJobRun(t *testing.T) {
 			j := &ContainerJob{
 				Schedule:  tt.schedule,
 				Action:    tt.action,
+				Timeout:   tt.timeout,
 				Command:   tt.command,
 				Container: tt.container,
 				cron:      c,

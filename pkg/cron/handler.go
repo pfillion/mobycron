@@ -29,11 +29,13 @@ func NewHandler(cron Cronner) (*Handler, error) {
 
 // Scan current containers for cron schedule
 func (h *Handler) Scan() error {
-	// TODO: Refactor log desing and unittesting
+	// TODO: Refactor log desing and unittesting OR support this log
 	// log := log.WithFields(log.Fields{
 	// 	"func": "Handler.Scan",
 	// })
 	// log.Infoln("scan containers for cron schedule")
+
+	defer h.cli.Close()
 
 	f := filters.NewArgs()
 	f.Add("label", "mobycron.schedule")
