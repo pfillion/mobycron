@@ -2,6 +2,7 @@ package cron
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -10,20 +11,6 @@ import (
 	"github.com/spf13/afero"
 	cron "gopkg.in/robfig/cron.v3"
 )
-
-// Runner is an interface for testing robfig/cron
-type Runner interface {
-	AddJob(spec string, cmd cron.Job) (cron.EntryID, error)
-	Start()
-	Stop()
-}
-
-// JobSynchroniser is an interface for testing sync.WaitGroup
-type JobSynchroniser interface {
-	Add(delta int)
-	Done()
-	Wait()
-}
 
 // Cron keeps track of any number of jobs, invoking the associated Job as
 // specified by the schedule. It may be started and stopped.
@@ -34,8 +21,17 @@ type Cron struct {
 }
 
 // NewCron return a new Cron job runner.
-func NewCron() *Cron {
-	return &Cron{cron.New(), &sync.WaitGroup{}, afero.NewOsFs()}
+func NewCron(parseSecond bool) *Cron {
+	option := cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor
+	if parseSecond {
+		option = option | cron.Second
+	}
+
+	return &Cron{
+		cron.New(cron.WithParser(cron.NewParser(option))),
+		&sync.WaitGroup{},
+		afero.NewOsFs(),
+	}
 }
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
@@ -81,6 +77,55 @@ func (c *Cron) AddJobs(jobs []Job) error {
 	return nil
 }
 
+// AddContainerJob add container job to the Cron to be run on the given schedule.
+func (c *Cron) AddContainerJob(job *ContainerJob) error {
+	if job == nil {
+		return errors.New("container job is required")
+	}
+
+	// TODO: Redesign log and evaluate if neccessary because of loggin error in handler loop
+	log.WithFields(log.Fields{
+		"func":            "Cron.AddContainerJob",
+		"schedule":        job.Schedule,
+		"action":          job.Action,
+		"timeout":         job.Timeout,
+		"command":         job.Command,
+		"container.ID":    job.Container.ID,
+		"container.Names": job.Container.Names,
+	}).Infoln("add container job to cron")
+
+	if job.Schedule == "" {
+		return errors.New("schedule is required")
+	}
+
+	if job.Timeout != "" {
+		if _, err := strconv.ParseInt(job.Timeout, 10, 0); err != nil {
+			return errors.New("invalid container timeout, only integer are permitted")
+		}
+	}
+
+	switch job.Action {
+	case "start", "restart", "stop":
+		if job.Command != "" {
+			return errors.New("a command can be specified only with 'exec' action")
+		}
+	case "exec":
+		if job.Command == "" {
+			return errors.New("command is required")
+		}
+	default:
+		return errors.New("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted")
+	}
+
+	job.cron = c
+
+	if _, err := c.runner.AddJob(job.Schedule, job); err != nil {
+		return errors.Wrap(err, "failed to add container job in cron")
+	}
+
+	return nil
+}
+
 // LoadConfig read Job from file in JSON format and add them to Cron.
 func (c *Cron) LoadConfig(filename string) error {
 	log := log.WithFields(log.Fields{
@@ -89,12 +134,11 @@ func (c *Cron) LoadConfig(filename string) error {
 	})
 	log.Infoln("load config file")
 
-	if ok, _ := afero.Exists(c.fs, "/configs/config.json"); !ok {
-		log.Warningln("no config was loaded, file not exist")
-		return nil
+	config, err := afero.ReadFile(c.fs, filename)
+	if err != nil {
+		return errors.Wrap(err, "failed to read config file")
 	}
 
-	config, _ := afero.ReadFile(c.fs, filename)
 	j := []Job{}
 	if err := json.Unmarshal([]byte(config), &j); err != nil {
 		return errors.Wrap(err, "failed to parse JSON data from config file")

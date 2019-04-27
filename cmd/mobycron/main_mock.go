@@ -9,31 +9,31 @@ import (
 	reflect "reflect"
 )
 
-// MockCron is a mock of Cron interface
-type MockCron struct {
+// MockCronner is a mock of Cronner interface
+type MockCronner struct {
 	ctrl     *gomock.Controller
-	recorder *MockCronMockRecorder
+	recorder *MockCronnerMockRecorder
 }
 
-// MockCronMockRecorder is the mock recorder for MockCron
-type MockCronMockRecorder struct {
-	mock *MockCron
+// MockCronnerMockRecorder is the mock recorder for MockCronner
+type MockCronnerMockRecorder struct {
+	mock *MockCronner
 }
 
-// NewMockCron creates a new mock instance
-func NewMockCron(ctrl *gomock.Controller) *MockCron {
-	mock := &MockCron{ctrl: ctrl}
-	mock.recorder = &MockCronMockRecorder{mock}
+// NewMockCronner creates a new mock instance
+func NewMockCronner(ctrl *gomock.Controller) *MockCronner {
+	mock := &MockCronner{ctrl: ctrl}
+	mock.recorder = &MockCronnerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockCron) EXPECT() *MockCronMockRecorder {
+func (m *MockCronner) EXPECT() *MockCronnerMockRecorder {
 	return m.recorder
 }
 
 // LoadConfig mocks base method
-func (m *MockCron) LoadConfig(filename string) error {
+func (m *MockCronner) LoadConfig(filename string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadConfig", filename)
 	ret0, _ := ret[0].(error)
@@ -41,33 +41,33 @@ func (m *MockCron) LoadConfig(filename string) error {
 }
 
 // LoadConfig indicates an expected call of LoadConfig
-func (mr *MockCronMockRecorder) LoadConfig(filename interface{}) *gomock.Call {
+func (mr *MockCronnerMockRecorder) LoadConfig(filename interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockCron)(nil).LoadConfig), filename)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockCronner)(nil).LoadConfig), filename)
 }
 
 // Start mocks base method
-func (m *MockCron) Start() {
+func (m *MockCronner) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
 // Start indicates an expected call of Start
-func (mr *MockCronMockRecorder) Start() *gomock.Call {
+func (mr *MockCronnerMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockCron)(nil).Start))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockCronner)(nil).Start))
 }
 
 // Stop mocks base method
-func (m *MockCron) Stop() {
+func (m *MockCronner) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
 // Stop indicates an expected call of Stop
-func (mr *MockCronMockRecorder) Stop() *gomock.Call {
+func (mr *MockCronnerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockCron)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockCronner)(nil).Stop))
 }
 
 // MockHandler is a mock of Handler interface

@@ -10,9 +10,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Cron keeps track of any number of jobs, invoking the associated Job as
+// Cronner keeps track of any number of jobs, invoking the associated Job as
 // specified by the schedule. It may be started and stopped.
-type Cron interface {
+type Cronner interface {
 	LoadConfig(filename string) error
 	Start()
 	Stop()
@@ -24,29 +24,34 @@ type Handler interface {
 	Listen() error
 }
 
-type cronApp struct {
-	cron    Cron
+var (
 	osChan  chan os.Signal
 	handler Handler
+	cronner Cronner
+	cmdRoot *cli.App
+	cfg     = config{}
+)
+
+type config struct {
+	cfgFile     string
+	dockerMode  bool
+	parseSecond bool
 }
 
-var before = initApp
-var action = startApp
-var app cronApp
-
 func initApp(ctx *cli.Context) error {
-	cron := cron.NewCron()
-	osChan := make(chan os.Signal)
-	// handler, err := events.NewHandler(cron)
-	// if err != nil {
-	// 	return err
-	// }
-
-	app = cronApp{
-		cron:   cron,
-		osChan: osChan,
-		// handler: handler,
+	c := cron.NewCron(cfg.parseSecond)
+	if cfg.dockerMode {
+		h, err := cron.NewHandler(c)
+		if err != nil {
+			return err
+		}
+		handler = h
+	} else {
+		handler = nil
 	}
+
+	cronner = c
+	osChan = make(chan os.Signal)
 
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
@@ -57,40 +62,72 @@ func initApp(ctx *cli.Context) error {
 func startApp(ctx *cli.Context) error {
 	sig := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 
-	if err := app.cron.LoadConfig("/configs/config.json"); err != nil {
-		return err
+	if cfg.cfgFile != "" {
+		if err := cronner.LoadConfig(cfg.cfgFile); err != nil {
+			return err
+		}
 	}
 
-	// if err := app.handler.Scan(); err != nil {
-	// 	return err
-	// }
+	if cfg.dockerMode {
+		if err := handler.Scan(); err != nil {
+			return err
+		}
 
-	// if err := app.handler.Listen(); err != nil {
-	// 	return err
-	// }
+		if err := handler.Listen(); err != nil {
+			return err
+		}
+	}
 
-	app.cron.Start()
+	cronner.Start()
 
 	log.WithFields(log.Fields{
 		"func":   "main.startApp",
 		"signal": sig,
 	}).Infoln("cron is running and waiting signal for stop")
 
-	signal.Notify(app.osChan, sig...)
-	<-app.osChan
+	signal.Notify(osChan, sig...)
+	<-osChan
 
-	app.cron.Stop()
+	cronner.Stop()
+	// TODO: Refactoring of all test for check log with Fields like in ContainerJob OR make Log Struct for regrouping and mocking
+	// TODO: handler.Close for closing DockerClient
+	// TODO: Complete all documentation
 
 	return nil
 }
 
 func main() {
-	app := cli.NewApp()
-	app.Before = before
-	app.Action = action
-
-	err := app.Run(os.Args)
+	err := cmdRoot.Run(os.Args)
 	if err != nil {
 		log.Fatalln(err)
+	}
+}
+
+func init() {
+	cmdRoot = cli.NewApp()
+	cmdRoot.Before = initApp
+	cmdRoot.Action = startApp
+
+	// Global options
+	cmdRoot.Flags = []cli.Flag{
+		cli.BoolTFlag{
+			Name:        "docker-mode, d",
+			EnvVar:      "MOBYCRON_DOCKER_MODE",
+			Destination: &cfg.dockerMode,
+			// TODO: complete Usage
+		},
+		cli.BoolFlag{
+			Name:        "parse-second, s",
+			EnvVar:      "MOBYCRON_PARSE_SECOND",
+			Destination: &cfg.parseSecond,
+			// TODO: complete Usage
+		},
+		cli.StringFlag{
+			Name:        "config-file, f",
+			EnvVar:      "MOBYCRON_CONFIG_FILE",
+			Destination: &cfg.cfgFile,
+			// TODO: complete Usage
+			// Usage exemple "/etc/mobycron/config.json"
+		},
 	}
 }

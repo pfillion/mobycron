@@ -1,1 +1,1 @@
-[{"schedule": "* * * * *","command": "bash","args": ["-c","echo Hello Joe"]}]
+[{"schedule": "* * * * * *","command": "bash","args": ["-c","echo Hello Joe"]}]

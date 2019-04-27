@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	cron "gopkg.in/robfig/cron.v3"
@@ -89,7 +91,7 @@ func TestAddJob(t *testing.T) {
 			),
 		},
 		{
-			name: "nil jon",
+			name: "nil job",
 			job:  nil,
 			checks: check(
 				hasError("job is required"),
@@ -99,7 +101,7 @@ func TestAddJob(t *testing.T) {
 			name: "CronRunner.AddJob return error",
 			job:  &Job{"3 * * * *", "/bin/bash", nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(1), fmt.Errorf("a error"))
+				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(0), fmt.Errorf("a error"))
 			},
 			checks: check(
 				hasError("a error"),
@@ -234,6 +236,164 @@ func TestAddJobs(t *testing.T) {
 	}
 }
 
+func TestAddContainerJob(t *testing.T) {
+	type checkFunc func(*testing.T, *Cron, string, error)
+	check := func(fns ...checkFunc) []checkFunc { return fns }
+
+	type mockFunc func(*MockRunner, *Cron)
+
+	hasError := func(want string) checkFunc {
+		return func(t *testing.T, c *Cron, out string, err error) {
+			assert.Assert(t, is.ErrorContains(err, want))
+		}
+	}
+
+	hasNilError := func() checkFunc {
+		return func(t *testing.T, c *Cron, out string, err error) {
+			assert.NilError(t, err)
+		}
+	}
+
+	hasOutput := func(want string) checkFunc {
+		return func(t *testing.T, c *Cron, out string, err error) {
+			assert.Assert(t, is.Contains(out, want))
+		}
+	}
+
+	tests := []struct {
+		name   string
+		job    *ContainerJob
+		mock   mockFunc
+		checks []checkFunc
+	}{
+		{
+			name: "valid container job",
+			job:  &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob("3 * * * *", &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, c, nil})
+			},
+			checks: check(
+				hasOutput("add container job to cron"),
+				hasNilError(),
+			),
+		},
+		{
+			name: "job with empty schedule",
+			job:  &ContainerJob{"", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			checks: check(
+				hasError("schedule is required"),
+			),
+		},
+		{
+			name: "job with empty timeout",
+			job:  &ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, nil, nil},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob("3 * * * *", &ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, c, nil})
+			},
+			checks: check(
+				hasOutput("add container job to cron"),
+				hasNilError(),
+			),
+		},
+		{
+			name: "job with invalid timeout",
+			job:  &ContainerJob{"3 * * * *", "exec", "invalidtimeout", "echo 'do job'", types.Container{}, nil, nil},
+			checks: check(
+				hasError("invalid container timeout, only integer are permitted"),
+			),
+		},
+		{
+			name: "invalid action",
+			job:  &ContainerJob{"* * * * *", "invalid_action", "30", "", types.Container{}, nil, nil},
+			checks: check(
+				hasError("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted"),
+			),
+		},
+		{
+			name: "invalid command when action is start",
+			job:  &ContainerJob{"* * * * *", "start", "30", "ls", types.Container{}, nil, nil},
+			checks: check(
+				hasError("a command can be specified only with 'exec' action"),
+			),
+		},
+		{
+			name: "invalid command when action is restart",
+			job:  &ContainerJob{"* * * * *", "restart", "30", "ls", types.Container{}, nil, nil},
+			checks: check(
+				hasError("a command can be specified only with 'exec' action"),
+			),
+		},
+		{
+			name: "invalid command when action is stop",
+			job:  &ContainerJob{"* * * * *", "stop", "30", "ls", types.Container{}, nil, nil},
+			checks: check(
+				hasError("a command can be specified only with 'exec' action"),
+			),
+		},
+		{
+			name: "valid command when action is exec",
+			job:  &ContainerJob{"* * * * *", "exec", "30", "ls", types.Container{}, nil, nil},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob(gomock.Any(), gomock.Any())
+			},
+			checks: check(
+				hasOutput("add container job to cron"),
+				hasNilError(),
+			),
+		},
+		{
+			name: "command required when action is exec",
+			job:  &ContainerJob{"* * * * *", "exec", "30", "", types.Container{}, nil, nil},
+			checks: check(
+				hasError("command is required"),
+			),
+		},
+		{
+			name: "nil job",
+			job:  nil,
+			checks: check(
+				hasError("container job is required"),
+			),
+		},
+		{
+			name: "CronRunner.AddJob return error",
+			job:  &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(0), errors.New("a error"))
+			},
+			checks: check(
+				hasError("a error"),
+				hasError("failed to add container job in cron"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			out := &bytes.Buffer{}
+			log.SetOutput(out)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			r := NewMockRunner(ctrl)
+
+			c := &Cron{r, nil, nil}
+			if tt.mock != nil {
+				tt.mock(r, c)
+			}
+
+			// Act
+			err := c.AddContainerJob(tt.job)
+
+			// Assert
+			for _, check := range tt.checks {
+				check(t, c, out.String(), err)
+			}
+		})
+	}
+}
+
 func TestStart(t *testing.T) {
 	type checkFunc func(*testing.T, string)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
@@ -347,12 +507,34 @@ func TestStop(t *testing.T) {
 
 func TestNewCron(t *testing.T) {
 	// Act
-	c := NewCron()
+	c := NewCron(false)
 
 	// Assert
 	assert.Assert(t, c.runner != nil)
 	assert.Assert(t, c.sync != nil)
 	assert.Assert(t, c.fs != nil)
+
+	err := c.AddJob(&Job{
+		Schedule: "* * * * * *",
+		Command:  "sh",
+	})
+	assert.Assert(t, is.ErrorContains(err, "expected exactly 5 fields, found 6"))
+}
+
+func TestNewCronParseSecond(t *testing.T) {
+	// Act
+	c := NewCron(true)
+
+	// Assert
+	assert.Assert(t, c.runner != nil)
+	assert.Assert(t, c.sync != nil)
+	assert.Assert(t, c.fs != nil)
+
+	err := c.AddJob(&Job{
+		Schedule: "* * * * * *",
+		Command:  "sh",
+	})
+	assert.NilError(t, err)
 }
 
 func TestLoadConfig(t *testing.T) {
@@ -435,10 +617,11 @@ func TestLoadConfig(t *testing.T) {
 			),
 		},
 		{
-			name: "file not exist",
+			name:     "error read config file",
+			filename: "/configs/config.json",
+			config:   "",
 			checks: check(
-				hasNilError(),
-				hasOutput("no config was loaded, file not exist"),
+				hasError("failed to read config file"),
 			),
 		},
 		{
@@ -478,7 +661,7 @@ func TestLoadConfig(t *testing.T) {
 			log.SetOutput(out)
 
 			fs := afero.NewMemMapFs()
-			if tt.filename != "" {
+			if tt.config != "" {
 				afero.WriteFile(fs, tt.filename, []byte(tt.config), 0640)
 			}
 

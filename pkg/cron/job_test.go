@@ -2,6 +2,7 @@ package cron
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -24,6 +25,12 @@ func TestJobRun(t *testing.T) {
 		}
 	}
 
+	hasNotOutput := func(notWant string) checkFunc {
+		return func(t *testing.T, out string) {
+			assert.Assert(t, !strings.Contains(out, notWant), "actual: %s", out)
+		}
+	}
+
 	tests := []struct {
 		name           string
 		command        string
@@ -37,12 +44,13 @@ func TestJobRun(t *testing.T) {
 		{
 			name:    "run job",
 			command: "echo",
-			args:    []string{"1"},
+			args:    []string{"hello bob"},
 			mock: func(s *MockJobSynchroniser) {
 				s.EXPECT().Add(1)
 				s.EXPECT().Done()
 			},
 			checks: check(
+				hasOutput("hello bob"),
 				hasOutput("job completed successfully"),
 			),
 		},
@@ -58,8 +66,8 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
+				hasOutput("job completed successfully"),
 			),
 		},
 		{
@@ -76,8 +84,8 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
+				hasOutput("job completed successfully"),
 			),
 		},
 		{
@@ -93,6 +101,7 @@ func TestJobRun(t *testing.T) {
 			},
 			checks: check(
 				hasOutput("invalid secret environment variable"),
+				hasNotOutput("job completed successfully"),
 			),
 		},
 		{
@@ -107,8 +116,8 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
+				hasOutput("job completed successfully"),
 			),
 		},
 		{
@@ -125,8 +134,8 @@ func TestJobRun(t *testing.T) {
 				s.EXPECT().Done()
 			},
 			checks: check(
-				hasOutput("job completed successfully"),
 				hasOutput("hello bob"),
+				hasOutput("job completed successfully"),
 			),
 		},
 		{
@@ -142,6 +151,7 @@ func TestJobRun(t *testing.T) {
 			},
 			checks: check(
 				hasOutput("invalid secret environment variable"),
+				hasOutput("job completed successfully"),
 			),
 		},
 		{
@@ -154,6 +164,7 @@ func TestJobRun(t *testing.T) {
 			},
 			checks: check(
 				hasOutput("job completed with error"),
+				hasNotOutput("job completed successfully"),
 			),
 		},
 	}
