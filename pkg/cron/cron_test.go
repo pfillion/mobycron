@@ -41,13 +41,13 @@ func TestAddJob(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		job    *Job
+		job    Job
 		mock   mockFunc
 		checks []checkFunc
 	}{
 		{
 			name: "valid job",
-			job:  &Job{"3 * * * *", "/bin/bash", []string{"-c echo 1"}, nil},
+			job:  Job{"3 * * * *", "/bin/bash", []string{"-c echo 1"}, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * *", &Job{"3 * * * *", "/bin/bash", []string{"-c echo 1"}, c})
 			},
@@ -58,21 +58,21 @@ func TestAddJob(t *testing.T) {
 		},
 		{
 			name: "job with empty schedule",
-			job:  &Job{"", "/bin/bash", []string{"-c echo 1"}, nil},
+			job:  Job{"", "/bin/bash", []string{"-c echo 1"}, nil},
 			checks: check(
 				hasError("schedule is required"),
 			),
 		},
 		{
 			name: "job with empty command",
-			job:  &Job{"3 * * * *", "", []string{"-c echo 1"}, nil},
+			job:  Job{"3 * * * *", "", []string{"-c echo 1"}, nil},
 			checks: check(
 				hasError("command is required"),
 			),
 		},
 		{
 			name: "job with empty args",
-			job:  &Job{"3 * * * *", "/bin/bash", []string{""}, nil},
+			job:  Job{"3 * * * *", "/bin/bash", []string{""}, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), &Job{"3 * * * *", "/bin/bash", []string{""}, c})
 			},
@@ -82,7 +82,7 @@ func TestAddJob(t *testing.T) {
 		},
 		{
 			name: "job with nil args",
-			job:  &Job{"3 * * * *", "/bin/bash", nil, nil},
+			job:  Job{"3 * * * *", "/bin/bash", nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * *", &Job{"3 * * * *", "/bin/bash", nil, c})
 			},
@@ -91,15 +91,8 @@ func TestAddJob(t *testing.T) {
 			),
 		},
 		{
-			name: "nil job",
-			job:  nil,
-			checks: check(
-				hasError("job is required"),
-			),
-		},
-		{
 			name: "CronRunner.AddJob return error",
-			job:  &Job{"3 * * * *", "/bin/bash", nil, nil},
+			job:  Job{"3 * * * *", "/bin/bash", nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(0), fmt.Errorf("a error"))
 			},
@@ -262,13 +255,13 @@ func TestAddContainerJob(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		job    *ContainerJob
+		job    ContainerJob
 		mock   mockFunc
 		checks []checkFunc
 	}{
 		{
 			name: "valid container job",
-			job:  &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			job:  ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * *", &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, c, nil})
 			},
@@ -279,14 +272,14 @@ func TestAddContainerJob(t *testing.T) {
 		},
 		{
 			name: "job with empty schedule",
-			job:  &ContainerJob{"", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			job:  ContainerJob{"", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
 			checks: check(
 				hasError("schedule is required"),
 			),
 		},
 		{
 			name: "job with empty timeout",
-			job:  &ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, nil, nil},
+			job:  ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob("3 * * * *", &ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, c, nil})
 			},
@@ -297,42 +290,42 @@ func TestAddContainerJob(t *testing.T) {
 		},
 		{
 			name: "job with invalid timeout",
-			job:  &ContainerJob{"3 * * * *", "exec", "invalidtimeout", "echo 'do job'", types.Container{}, nil, nil},
+			job:  ContainerJob{"3 * * * *", "exec", "invalidtimeout", "echo 'do job'", types.Container{}, nil, nil},
 			checks: check(
 				hasError("invalid container timeout, only integer are permitted"),
 			),
 		},
 		{
 			name: "invalid action",
-			job:  &ContainerJob{"* * * * *", "invalid_action", "30", "", types.Container{}, nil, nil},
+			job:  ContainerJob{"* * * * *", "invalid_action", "30", "", types.Container{}, nil, nil},
 			checks: check(
 				hasError("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted"),
 			),
 		},
 		{
 			name: "invalid command when action is start",
-			job:  &ContainerJob{"* * * * *", "start", "30", "ls", types.Container{}, nil, nil},
+			job:  ContainerJob{"* * * * *", "start", "30", "ls", types.Container{}, nil, nil},
 			checks: check(
 				hasError("a command can be specified only with 'exec' action"),
 			),
 		},
 		{
 			name: "invalid command when action is restart",
-			job:  &ContainerJob{"* * * * *", "restart", "30", "ls", types.Container{}, nil, nil},
+			job:  ContainerJob{"* * * * *", "restart", "30", "ls", types.Container{}, nil, nil},
 			checks: check(
 				hasError("a command can be specified only with 'exec' action"),
 			),
 		},
 		{
 			name: "invalid command when action is stop",
-			job:  &ContainerJob{"* * * * *", "stop", "30", "ls", types.Container{}, nil, nil},
+			job:  ContainerJob{"* * * * *", "stop", "30", "ls", types.Container{}, nil, nil},
 			checks: check(
 				hasError("a command can be specified only with 'exec' action"),
 			),
 		},
 		{
 			name: "valid command when action is exec",
-			job:  &ContainerJob{"* * * * *", "exec", "30", "ls", types.Container{}, nil, nil},
+			job:  ContainerJob{"* * * * *", "exec", "30", "ls", types.Container{}, nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any())
 			},
@@ -343,21 +336,14 @@ func TestAddContainerJob(t *testing.T) {
 		},
 		{
 			name: "command required when action is exec",
-			job:  &ContainerJob{"* * * * *", "exec", "30", "", types.Container{}, nil, nil},
+			job:  ContainerJob{"* * * * *", "exec", "30", "", types.Container{}, nil, nil},
 			checks: check(
 				hasError("command is required"),
 			),
 		},
 		{
-			name: "nil job",
-			job:  nil,
-			checks: check(
-				hasError("container job is required"),
-			),
-		},
-		{
 			name: "CronRunner.AddJob return error",
-			job:  &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			job:  ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(0), errors.New("a error"))
 			},
@@ -514,7 +500,7 @@ func TestNewCron(t *testing.T) {
 	assert.Assert(t, c.sync != nil)
 	assert.Assert(t, c.fs != nil)
 
-	err := c.AddJob(&Job{
+	err := c.AddJob(Job{
 		Schedule: "* * * * * *",
 		Command:  "sh",
 	})
@@ -530,7 +516,7 @@ func TestNewCronParseSecond(t *testing.T) {
 	assert.Assert(t, c.sync != nil)
 	assert.Assert(t, c.fs != nil)
 
-	err := c.AddJob(&Job{
+	err := c.AddJob(Job{
 		Schedule: "* * * * * *",
 		Command:  "sh",
 	})

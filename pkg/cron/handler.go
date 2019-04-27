@@ -51,7 +51,7 @@ func (h *Handler) Scan() error {
 			Container: container,
 			cli:       h.cli,
 		}
-		if err := h.cron.AddContainerJob(&j); err != nil {
+		if err := h.cron.AddContainerJob(j); err != nil {
 			log.WithError(err).Errorln("add container job to cron is in error")
 		}
 	}

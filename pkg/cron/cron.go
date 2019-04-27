@@ -35,11 +35,7 @@ func NewCron(parseSecond bool) *Cron {
 }
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(job *Job) error {
-	if job == nil {
-		return errors.New("job is required")
-	}
-
+func (c *Cron) AddJob(job Job) error {
 	log.WithFields(log.Fields{
 		"func":     "Cron.AddJob",
 		"schedule": job.Schedule,
@@ -57,7 +53,7 @@ func (c *Cron) AddJob(job *Job) error {
 
 	job.cron = c
 
-	if _, err := c.runner.AddJob(job.Schedule, job); err != nil {
+	if _, err := c.runner.AddJob(job.Schedule, &job); err != nil {
 		return errors.Wrap(err, "failed to add job in cron")
 	}
 
@@ -70,7 +66,7 @@ func (c *Cron) AddJobs(jobs []Job) error {
 		return errors.New("jobs is required")
 	}
 	for _, job := range jobs {
-		if err := c.AddJob(&job); err != nil {
+		if err := c.AddJob(job); err != nil {
 			return err
 		}
 	}
@@ -78,11 +74,7 @@ func (c *Cron) AddJobs(jobs []Job) error {
 }
 
 // AddContainerJob add container job to the Cron to be run on the given schedule.
-func (c *Cron) AddContainerJob(job *ContainerJob) error {
-	if job == nil {
-		return errors.New("container job is required")
-	}
-
+func (c *Cron) AddContainerJob(job ContainerJob) error {
 	// TODO: Redesign log and evaluate if neccessary because of loggin error in handler loop
 	log.WithFields(log.Fields{
 		"func":            "Cron.AddContainerJob",
@@ -119,7 +111,7 @@ func (c *Cron) AddContainerJob(job *ContainerJob) error {
 
 	job.cron = c
 
-	if _, err := c.runner.AddJob(job.Schedule, job); err != nil {
+	if _, err := c.runner.AddJob(job.Schedule, &job); err != nil {
 		return errors.Wrap(err, "failed to add container job in cron")
 	}
 

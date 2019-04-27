@@ -112,7 +112,7 @@ func TestScan(t *testing.T) {
 					},
 				}
 				cli.EXPECT().ContainerList(ctx, opt).Return(containers, nil)
-				sc.EXPECT().AddContainerJob(&ContainerJob{
+				sc.EXPECT().AddContainerJob(ContainerJob{
 					Schedule:  "3 * * * * *",
 					Action:    "exec",
 					Timeout:   "30",
@@ -157,7 +157,7 @@ func TestScan(t *testing.T) {
 					},
 				}
 				cli.EXPECT().ContainerList(ctx, opt).Return(containers, nil)
-				sc.EXPECT().AddContainerJob(&ContainerJob{
+				sc.EXPECT().AddContainerJob(ContainerJob{
 					Schedule:  "1 * * * * *",
 					Action:    "exec1",
 					Timeout:   "30",
@@ -166,7 +166,7 @@ func TestScan(t *testing.T) {
 					cron:      nil,
 					cli:       cli,
 				})
-				sc.EXPECT().AddContainerJob(&ContainerJob{
+				sc.EXPECT().AddContainerJob(ContainerJob{
 					Schedule:  "2 * * * * *",
 					Action:    "exec2",
 					Timeout:   "5",

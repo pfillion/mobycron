@@ -158,7 +158,7 @@ func (m *MockCronner) EXPECT() *MockCronnerMockRecorder {
 }
 
 // AddContainerJob mocks base method
-func (m *MockCronner) AddContainerJob(job *ContainerJob) error {
+func (m *MockCronner) AddContainerJob(job ContainerJob) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddContainerJob", job)
 	ret0, _ := ret[0].(error)
