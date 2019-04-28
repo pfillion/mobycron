@@ -7,6 +7,7 @@ package cron
 import (
 	context "context"
 	types "github.com/docker/docker/api/types"
+	events "github.com/docker/docker/api/types/events"
 	gomock "github.com/golang/mock/gomock"
 	cron_v3 "gopkg.in/robfig/cron.v3"
 	reflect "reflect"
@@ -323,4 +324,19 @@ func (m *MockDockerClient) ContainerRestart(ctx context.Context, container strin
 func (mr *MockDockerClientMockRecorder) ContainerRestart(ctx, container, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerRestart", reflect.TypeOf((*MockDockerClient)(nil).ContainerRestart), ctx, container, timeout)
+}
+
+// Events mocks base method
+func (m *MockDockerClient) Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Events", ctx, options)
+	ret0, _ := ret[0].(<-chan events.Message)
+	ret1, _ := ret[1].(<-chan error)
+	return ret0, ret1
+}
+
+// Events indicates an expected call of Events
+func (mr *MockDockerClientMockRecorder) Events(ctx, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockDockerClient)(nil).Events), ctx, options)
 }

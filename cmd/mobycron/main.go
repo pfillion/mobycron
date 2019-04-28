@@ -90,7 +90,6 @@ func startApp(ctx *cli.Context) error {
 
 	cronner.Stop()
 	// TODO: Refactoring of all test for check log with Fields like in ContainerJob OR make Log Struct for regrouping and mocking
-	// TODO: closing DockerClient after every connection
 	// TODO: Complete all documentation
 
 	return nil
