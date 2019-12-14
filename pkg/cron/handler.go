@@ -77,12 +77,18 @@ func (h *Handler) Scan() error {
 // Listen docker message for containers with cron schedule
 func (h *Handler) Listen() error {
 	// TODO: implement
-	return nil
 
-	// filterArgs := filters.NewArgs()
+	log := log.WithFields(log.Fields{
+		"func": "Handler.Listen",
+	})
+	log.Infoln("listen events from server for containers with schedule")
+
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", "mobycron.schedule")
+
 	// // Adds the cron job
 	// filterArgs.Add("event", "start")
-	// filterArgs.Add("event", "create")
+	filterArgs.Add("event", "create")
 
 	// filterArgs.Add("event", "stop")
 	// filterArgs.Add("event", "die")
@@ -90,34 +96,45 @@ func (h *Handler) Listen() error {
 	// // removes from the cron queue
 	// filterArgs.Add("event", "destroy")
 
-	// eventOptions := types.EventsOptions{
-	// 	Filters: filterArgs,
-	// }
+	eventOptions := types.EventsOptions{
+		Filters: filterArgs,
+	}
+
 	// ctx, cancelFunc := context.WithCancel(context.Background())
-	// eventChan, errChan := h.cli.Events(ctx, eventOptions)
+	ctx := context.Background()
+	eventChan, errChan := h.cli.Events(ctx, eventOptions)
 
-	// listen := func() {
-	// 	// loop:
-	// 	for {
-	// 		// eventStream, errChan := router.Listen(ctx)
-	// 		for {
-	// 			select {
-	// 			case event := <-eventChan:
-	// 				log.Infoln(event)
-	// 				// handler.Handle(&event)
-	// 			case err := <-errChan:
-	// 				log.Errorln(err)
-	// 				cancelFunc()
-	// 				break
-	// 				// continue loop
-	// 				// TODO: replace loop by break ???
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// go listen()
+	listen := func() {
+		// loop:
+		for {
+			// eventStream, errChan := router.Listen(ctx)
+			for {
+				select {
+				case event := <-eventChan:
+					log.Infoln(event)
 
-	// return nil
+					// f := filters.NewArgs()
+					// f.Add("id", event.Actor.ID)
+					// containers, _ := h.cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: f})
+					// // if err != nil {
+					// // 	return err
+					// // }
+					// log.Infoln(containers)
+
+					// handler.Handle(&event)
+				case err := <-errChan:
+					log.Errorln(err)
+					// cancelFunc()
+					break
+					// continue loop
+					// TODO: replace loop by break ???
+				}
+			}
+		}
+	}
+	go listen()
+
+	return nil
 
 	// Adding a cron.schedule label flags the container for deeper inspection
 	// With this service

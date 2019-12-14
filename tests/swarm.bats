@@ -36,7 +36,7 @@ function container_action_completed_successfully() {
 	[ $(docker service logs $1 | grep -c 'container action completed successfully') -ge $2 ]
 }
 
-@test "start all replicas from service" {
+@test "swarm - start all replicas from service" {
     # Arrange
     docker service create -d --name ${DOER1_SERVICE} --replicas=2 --restart-condition=none --container-label=mobycron.schedule='* * * * * *' --container-label=mobycron.action='start' busybox hostname
     retry 10 1 service_is_ready ${DOER1_SERVICE} "hostname" "shutdown" 2
@@ -52,7 +52,7 @@ function container_action_completed_successfully() {
     assert_output --regexp ${DOER1_SERVICE}'\.2.*container action completed successfully'
 }
 
-@test "start container only from active service task" {
+@test "swarm - start container only from active service task" {
 	# Arrange
     docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='* * * * * 1' --container-label=mobycron.action='start' busybox echo 'job1'
     retry 10 1 service_is_ready ${DOER1_SERVICE} "job1" "shutdown" 1

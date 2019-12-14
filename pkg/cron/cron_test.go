@@ -273,6 +273,19 @@ func TestAddContainerJob(t *testing.T) {
 			),
 		},
 		{
+			name: "multiples containers not in service",
+			job1: ContainerJob{Schedule: "1 * * * *", Action: "start"},
+			job2: &ContainerJob{Schedule: "2 * * * *", Action: "start"},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob("1 * * * *", &ContainerJob{Schedule: "1 * * * *", Action: "start", cron: c})
+				r.EXPECT().AddJob("2 * * * *", &ContainerJob{Schedule: "2 * * * *", Action: "start", cron: c})
+			},
+			checks: check(
+				hasNilError(),
+				hasLogField("msg", "add container job to cron"),
+			),
+		},
+		{
 			name: "job with empty schedule",
 			job1: ContainerJob{Schedule: ""},
 			checks: check(

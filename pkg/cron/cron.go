@@ -126,7 +126,7 @@ func (c *Cron) AddContainerJob(job ContainerJob) error {
 
 	// Check if replacement is needed
 	key := fmt.Sprintf("%s.%d", job.ServiceID, job.Slot)
-	if entry, ok := c.jobEntries[key]; ok {
+	if entry, ok := c.jobEntries[key]; job.ServiceID != "" && ok {
 		if entry.created > job.Created {
 			log.Infoln("skip replacement, the container job is older")
 			return nil

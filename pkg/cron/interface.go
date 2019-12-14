@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
 	cron "github.com/robfig/cron/v3"
 )
 
@@ -39,5 +40,5 @@ type DockerClient interface {
 	ContainerStart(ctx context.Context, container string, options types.ContainerStartOptions) error
 	ContainerStop(ctx context.Context, container string, timeout *time.Duration) error
 	ContainerRestart(ctx context.Context, container string, timeout *time.Duration) error
-	// Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
+	Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
 }
