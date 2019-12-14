@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	cron "github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
-	cron "gopkg.in/robfig/cron.v3"
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
+	"gotest.tools/v3/assert"
+	is "gotest.tools/v3/assert/cmp"
 )
 
 func TestAddJob(t *testing.T) {
@@ -33,9 +32,9 @@ func TestAddJob(t *testing.T) {
 		}
 	}
 
-	hasOutput := func(want string) checkFunc {
+	hasLogField := func(field string, want string) checkFunc {
 		return func(t *testing.T, c *Cron, out string, err error) {
-			assert.Assert(t, is.Contains(out, want))
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
 
@@ -52,8 +51,8 @@ func TestAddJob(t *testing.T) {
 				r.EXPECT().AddJob("3 * * * *", &Job{"3 * * * *", "/bin/bash", []string{"-c echo 1"}, c})
 			},
 			checks: check(
-				hasOutput("add job to cron"),
 				hasNilError(),
+				hasLogField("msg", "add job to cron"),
 			),
 		},
 		{
@@ -78,6 +77,7 @@ func TestAddJob(t *testing.T) {
 			},
 			checks: check(
 				hasNilError(),
+				hasLogField("msg", "add job to cron"),
 			),
 		},
 		{
@@ -88,6 +88,7 @@ func TestAddJob(t *testing.T) {
 			},
 			checks: check(
 				hasNilError(),
+				hasLogField("msg", "add job to cron"),
 			),
 		},
 		{
@@ -113,7 +114,7 @@ func TestAddJob(t *testing.T) {
 			defer ctrl.Finish()
 			r := NewMockRunner(ctrl)
 
-			c := &Cron{r, nil, nil}
+			c := &Cron{r, nil, nil, nil}
 			if tt.mock != nil {
 				tt.mock(r, c)
 			}
@@ -213,7 +214,7 @@ func TestAddJobs(t *testing.T) {
 			defer ctrl.Finish()
 			r := NewMockRunner(ctrl)
 
-			c := &Cron{r, nil, nil}
+			c := &Cron{r, nil, nil, nil}
 			if tt.mock != nil {
 				tt.mock(r, c)
 			}
@@ -247,109 +248,135 @@ func TestAddContainerJob(t *testing.T) {
 		}
 	}
 
-	hasOutput := func(want string) checkFunc {
+	hasLogField := func(field string, want string) checkFunc {
 		return func(t *testing.T, c *Cron, out string, err error) {
-			assert.Assert(t, is.Contains(out, want))
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
 
 	tests := []struct {
 		name   string
-		job    ContainerJob
+		job1   ContainerJob
+		job2   *ContainerJob
 		mock   mockFunc
 		checks []checkFunc
 	}{
 		{
-			name: "valid container job",
-			job:  ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			name: "simple container job",
+			job1: ContainerJob{Schedule: "3 * * * *", Action: "start"},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("3 * * * *", &ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, c, nil})
+				r.EXPECT().AddJob("3 * * * *", &ContainerJob{Schedule: "3 * * * *", Action: "start", cron: c})
 			},
 			checks: check(
-				hasOutput("add container job to cron"),
 				hasNilError(),
+				hasLogField("msg", "add container job to cron"),
 			),
 		},
 		{
 			name: "job with empty schedule",
-			job:  ContainerJob{"", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: ""},
 			checks: check(
 				hasError("schedule is required"),
 			),
 		},
 		{
 			name: "job with empty timeout",
-			job:  ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "3 * * * *", Action: "restart", Timeout: ""},
 			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("3 * * * *", &ContainerJob{"3 * * * *", "exec", "", "echo 'do job'", types.Container{}, c, nil})
+				r.EXPECT().AddJob("3 * * * *", &ContainerJob{Schedule: "3 * * * *", Action: "restart", cron: c})
 			},
 			checks: check(
-				hasOutput("add container job to cron"),
 				hasNilError(),
+				hasLogField("msg", "add container job to cron"),
 			),
 		},
 		{
-			name: "job with invalid timeout",
-			job:  ContainerJob{"3 * * * *", "exec", "invalidtimeout", "echo 'do job'", types.Container{}, nil, nil},
+			name: "invalid timeout",
+			job1: ContainerJob{Schedule: "3 * * * *", Action: "restart", Timeout: "invalid"},
 			checks: check(
 				hasError("invalid container timeout, only integer are permitted"),
 			),
 		},
 		{
 			name: "invalid action",
-			job:  ContainerJob{"* * * * *", "invalid_action", "30", "", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "3 * * * *", Action: "invalid"},
 			checks: check(
 				hasError("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted"),
 			),
 		},
 		{
 			name: "invalid command when action is start",
-			job:  ContainerJob{"* * * * *", "start", "30", "ls", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "* * * * *", Action: "start", Command: "ls"},
 			checks: check(
 				hasError("a command can be specified only with 'exec' action"),
 			),
 		},
 		{
 			name: "invalid command when action is restart",
-			job:  ContainerJob{"* * * * *", "restart", "30", "ls", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "* * * * *", Action: "restart", Command: "ls"},
 			checks: check(
 				hasError("a command can be specified only with 'exec' action"),
 			),
 		},
 		{
 			name: "invalid command when action is stop",
-			job:  ContainerJob{"* * * * *", "stop", "30", "ls", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "* * * * *", Action: "stop", Command: "ls"},
 			checks: check(
 				hasError("a command can be specified only with 'exec' action"),
 			),
 		},
 		{
 			name: "valid command when action is exec",
-			job:  ContainerJob{"* * * * *", "exec", "30", "ls", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "* * * * *", Action: "exec", Command: "ls"},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any())
 			},
 			checks: check(
-				hasOutput("add container job to cron"),
 				hasNilError(),
 			),
 		},
 		{
 			name: "command required when action is exec",
-			job:  ContainerJob{"* * * * *", "exec", "30", "", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "* * * * *", Action: "exec", Command: ""},
 			checks: check(
 				hasError("command is required"),
 			),
 		},
 		{
 			name: "CronRunner.AddJob return error",
-			job:  ContainerJob{"3 * * * *", "exec", "30", "echo 'do job'", types.Container{}, nil, nil},
+			job1: ContainerJob{Schedule: "3 * * * *", Action: "start"},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().AddJob(gomock.Any(), gomock.Any()).Return(cron.EntryID(0), errors.New("a error"))
 			},
 			checks: check(
 				hasError("a error"),
 				hasError("failed to add container job in cron"),
+			),
+		},
+		{
+			name: "replace job from service by one in same slot",
+			job1: ContainerJob{Schedule: "1 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 1},
+			job2: &ContainerJob{Schedule: "2 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 2},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob("1 * * * *", &ContainerJob{Schedule: "1 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 1, cron: c}).Return(cron.EntryID(1), nil)
+				r.EXPECT().Remove(cron.EntryID(1))
+				r.EXPECT().AddJob("2 * * * *", &ContainerJob{Schedule: "2 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 2, cron: c})
+			},
+			checks: check(
+				hasNilError(),
+				hasLogField("msg", "replace container job in cron"),
+			),
+		},
+		{
+			name: "don't replace job from service when is older",
+			job1: ContainerJob{Schedule: "1 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 2},
+			job2: &ContainerJob{Schedule: "2 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 1},
+			mock: func(r *MockRunner, c *Cron) {
+				r.EXPECT().AddJob("1 * * * *", &ContainerJob{Schedule: "1 * * * *", Action: "start", ServiceID: "s1", Slot: 1, Created: 2, cron: c}).Return(cron.EntryID(1), nil)
+			},
+			checks: check(
+				hasNilError(),
+				hasLogField("msg", "skip replacement, the container job is older"),
 			),
 		},
 	}
@@ -364,13 +391,16 @@ func TestAddContainerJob(t *testing.T) {
 			defer ctrl.Finish()
 			r := NewMockRunner(ctrl)
 
-			c := &Cron{r, nil, nil}
+			c := &Cron{r, nil, nil, make(map[string]cronEntry)}
 			if tt.mock != nil {
 				tt.mock(r, c)
 			}
 
 			// Act
-			err := c.AddContainerJob(tt.job)
+			err := c.AddContainerJob(tt.job1)
+			if tt.job2 != nil {
+				err = c.AddContainerJob(*tt.job2)
+			}
 
 			// Assert
 			for _, check := range tt.checks {
@@ -386,9 +416,9 @@ func TestStart(t *testing.T) {
 
 	type mockFunc func(*MockRunner)
 
-	hasOutput := func(want string) checkFunc {
+	hasLogField := func(field string, want string) checkFunc {
 		return func(t *testing.T, out string) {
-			assert.Assert(t, is.Contains(out, want))
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
 
@@ -403,7 +433,7 @@ func TestStart(t *testing.T) {
 				r.EXPECT().Start()
 			},
 			checks: check(
-				hasOutput("start cron"),
+				hasLogField("msg", "start cron"),
 			),
 		},
 	}
@@ -421,7 +451,7 @@ func TestStart(t *testing.T) {
 				tt.mock(r)
 			}
 
-			c := &Cron{r, nil, nil}
+			c := &Cron{r, nil, nil, nil}
 
 			// Act
 			c.Start()
@@ -440,9 +470,9 @@ func TestStop(t *testing.T) {
 
 	type mockFunc func(*MockRunner, *MockJobSynchroniser)
 
-	hasOutput := func(want string) checkFunc {
+	hasLogField := func(field string, want string) checkFunc {
 		return func(t *testing.T, out string) {
-			assert.Assert(t, is.Contains(out, want))
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
 
@@ -458,8 +488,8 @@ func TestStop(t *testing.T) {
 				s.EXPECT().Wait()
 			},
 			checks: check(
-				hasOutput("stopping cron, wait for running jobs"),
-				hasOutput("cron is stopped, all jobs are completed"),
+				hasLogField("msg", "stopping cron, wait for running jobs"),
+				hasLogField("msg", "cron is stopped, all jobs are completed"),
 			),
 		},
 	}
@@ -478,7 +508,7 @@ func TestStop(t *testing.T) {
 				tt.mock(r, s)
 			}
 
-			c := &Cron{r, s, nil}
+			c := &Cron{r, s, nil, nil}
 
 			// Act
 			c.Stop()
@@ -499,6 +529,7 @@ func TestNewCron(t *testing.T) {
 	assert.Assert(t, c.runner != nil)
 	assert.Assert(t, c.sync != nil)
 	assert.Assert(t, c.fs != nil)
+	assert.Assert(t, len(c.jobEntries) == 0)
 
 	err := c.AddJob(Job{
 		Schedule: "* * * * * *",
@@ -515,6 +546,7 @@ func TestNewCronParseSecond(t *testing.T) {
 	assert.Assert(t, c.runner != nil)
 	assert.Assert(t, c.sync != nil)
 	assert.Assert(t, c.fs != nil)
+	assert.Assert(t, len(c.jobEntries) == 0)
 
 	err := c.AddJob(Job{
 		Schedule: "* * * * * *",
@@ -541,9 +573,9 @@ func TestLoadConfig(t *testing.T) {
 		}
 	}
 
-	hasOutput := func(want string) checkFunc {
+	hasLogField := func(field string, want string) checkFunc {
 		return func(t *testing.T, c *Cron, out string, err error) {
-			assert.Assert(t, is.Contains(out, want))
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
 
@@ -571,7 +603,7 @@ func TestLoadConfig(t *testing.T) {
 			},
 			checks: check(
 				hasNilError(),
-				hasOutput("load config file"),
+				hasLogField("msg", "load config file"),
 			),
 		},
 		{
@@ -599,7 +631,7 @@ func TestLoadConfig(t *testing.T) {
 			},
 			checks: check(
 				hasNilError(),
-				hasOutput("load config file"),
+				hasLogField("msg", "load config file"),
 			),
 		},
 		{
@@ -655,7 +687,7 @@ func TestLoadConfig(t *testing.T) {
 			defer ctrl.Finish()
 			r := NewMockRunner(ctrl)
 
-			c := &Cron{r, nil, fs}
+			c := &Cron{r, nil, fs, nil}
 			if tt.mock != nil {
 				tt.mock(r, c)
 			}

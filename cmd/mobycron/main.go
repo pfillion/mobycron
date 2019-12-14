@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,7 +16,7 @@ import (
 type Cronner interface {
 	LoadConfig(filename string) error
 	Start()
-	Stop()
+	Stop() context.Context
 }
 
 // Handler scan and listen docker messages of containers labeled for crontab
@@ -89,8 +90,10 @@ func startApp(ctx *cli.Context) error {
 	<-osChan
 
 	cronner.Stop()
-	// TODO: Refactoring of all test for check log with Fields like in ContainerJob OR make Log Struct for regrouping and mocking
-	// TODO: Complete all documentation
+	// TODO: Refactoring of all test for check log with Fields like handler_test working with output but with field and value
+	// TODO: Migrate to urfave/cli/v2
+	// TODO: Refactoring all tests for verify all fields logged in the main test case
+	// TODO: change label action to be 'start' by default
 
 	return nil
 }
@@ -113,20 +116,19 @@ func init() {
 			Name:        "docker-mode, d",
 			EnvVar:      "MOBYCRON_DOCKER_MODE",
 			Destination: &cfg.dockerMode,
-			// TODO: complete Usage
+			Usage:       "activate docker mode (default: true)",
 		},
 		cli.BoolFlag{
 			Name:        "parse-second, s",
 			EnvVar:      "MOBYCRON_PARSE_SECOND",
 			Destination: &cfg.parseSecond,
-			// TODO: complete Usage
+			Usage:       "accept an optional seconds field at the beginning of the cron spec (default: false)",
 		},
 		cli.StringFlag{
 			Name:        "config-file, f",
 			EnvVar:      "MOBYCRON_CONFIG_FILE",
 			Destination: &cfg.cfgFile,
-			// TODO: complete Usage
-			// Usage exemple "/etc/mobycron/config.json"
+			Usage:       "set file path to schedule all job like a crontab file",
 		},
 	}
 }

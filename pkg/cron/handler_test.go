@@ -3,7 +3,7 @@ package cron
 import (
 	"bytes"
 	context "context"
-	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
@@ -12,8 +12,8 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
+	"gotest.tools/v3/assert"
+	is "gotest.tools/v3/assert/cmp"
 )
 
 func TestNewHandler(t *testing.T) {
@@ -44,35 +44,26 @@ func TestNewHandlerError(t *testing.T) {
 }
 
 func TestScan(t *testing.T) {
-	type checkFunc func(*testing.T, log.Fields, error)
+	type checkFunc func(*testing.T, string, error)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
 	type mockFunc func(*MockCronner, *MockDockerClient)
 
 	hasError := func(want string) checkFunc {
-		return func(t *testing.T, fields log.Fields, err error) {
+		return func(t *testing.T, out string, err error) {
 			assert.Assert(t, is.ErrorContains(err, want))
 		}
 	}
 
 	hasNilError := func() checkFunc {
-		return func(t *testing.T, fields log.Fields, err error) {
+		return func(t *testing.T, out string, err error) {
 			assert.NilError(t, err)
-			// assert.Assert(t, is.Equal(fields["level"], "info"), "log fields: %v", fields)
-			// assert.Assert(t, is.Nil(fields["error"]), "log fields: %v", fields)
-		}
-	}
-
-	hasLogError := func(want string) checkFunc {
-		return func(t *testing.T, fields log.Fields, err error) {
-			assert.Assert(t, is.Equal(fields["level"], "error"), "log fields: %v", fields)
-			assert.Assert(t, is.Equal(fields["error"], want), "log fields: %v", fields)
 		}
 	}
 
 	hasLogField := func(field string, want string) checkFunc {
-		return func(t *testing.T, fields log.Fields, err error) {
-			assert.Assert(t, is.Equal(fields[field], want), "log fields: %v", fields)
+		return func(t *testing.T, out string, err error) {
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
 
@@ -124,9 +115,9 @@ func TestScan(t *testing.T) {
 			},
 			checks: check(
 				hasNilError(),
-				// TODO: cleanup
-				// hasLogField("func", "Handler.Scan"),
-				// hasLogField("msg", "scan containers for cron schedule"),
+				hasLogField("level", "info"),
+				hasLogField("func", "Handler.Scan"),
+				hasLogField("msg", "scan containers for cron schedule"),
 			),
 		},
 		{
@@ -183,6 +174,61 @@ func TestScan(t *testing.T) {
 			),
 		},
 		{
+			name: "container from service/task",
+			mock: func(sc *MockCronner, cli *MockDockerClient) {
+				containers := []types.Container{
+					{
+						Created: 123,
+						Labels: map[string]string{
+							"com.docker.swarm.service.id":   "sid",
+							"com.docker.swarm.service.name": "sname",
+							"com.docker.swarm.task.id":      "tid",
+							"com.docker.swarm.task.name":    "sname.1.tid",
+							"mobycron.schedule":             "2 * * * * *",
+							"mobycron.action":               "start",
+						},
+					},
+				}
+				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(containers, nil)
+				sc.EXPECT().AddContainerJob(ContainerJob{
+					Schedule:    "2 * * * * *",
+					Action:      "start",
+					ServiceID:   "sid",
+					ServiceName: "sname",
+					TaskID:      "tid",
+					TaskName:    "sname.1.tid",
+					Slot:        1,
+					Created:     123,
+					Container:   containers[0],
+					cli:         cli,
+				})
+				cli.EXPECT().Close()
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name: "invalid slot",
+			mock: func(sc *MockCronner, cli *MockDockerClient) {
+				containers := []types.Container{
+					{
+						Labels: map[string]string{
+							"com.docker.swarm.task.name": "sname.invalidslot.tid",
+						},
+					},
+				}
+				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(containers, nil)
+				cli.EXPECT().Close()
+			},
+			checks: check(
+				hasNilError(),
+				hasLogField("level", "error"),
+				hasLogField("msg", "failed to convert slot of label 'com.docker.swarm.task.name'"),
+			),
+		},
+
+		{
 			name: "ContainerList in error",
 			mock: func(sc *MockCronner, cli *MockDockerClient) {
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(nil, errors.New("ContainerList in error"))
@@ -201,7 +247,9 @@ func TestScan(t *testing.T) {
 				cli.EXPECT().Close()
 			},
 			checks: check(
-				hasLogError("AddContainerJob in error"),
+				hasNilError(),
+				hasLogField("level", "error"),
+				hasLogField("error", "AddContainerJob in error"),
 				hasLogField("msg", "add container job to cron is in error"),
 			),
 		},
@@ -227,46 +275,34 @@ func TestScan(t *testing.T) {
 			err := h.Scan()
 
 			// Assert
-			var fields log.Fields
-			if out.Len() > 0 {
-				errLog := json.Unmarshal(out.Bytes(), &fields)
-				assert.NilError(t, errLog)
-			}
-
 			for _, check := range tt.checks {
-				check(t, fields, err)
+				check(t, out.String(), err)
 			}
 		})
 	}
 }
 
 func TestListen(t *testing.T) {
-	// // Arrange
-	// out := &bytes.Buffer{}
-	// log.SetOutput(out)
+	// Arrange
+	out := &bytes.Buffer{}
+	log.SetOutput(out)
 
-	// ctrl := gomock.NewController(t)
-	// defer ctrl.Finish()
-	// cron := NewMockCronner(ctrl)
-	// cli := NewMockDockerClient(ctrl)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cron := NewMockCronner(ctrl)
+	cli := NewMockDockerClient(ctrl)
 
-	// h := &Handler{cron, cli}
-	// // if tt.mock != nil {
-	// // 	tt.mock(cron, cli)
-	// // }
+	h := &Handler{cron, cli}
+	// if tt.mock != nil {
+	// 	tt.mock(cron, cli)
+	// }
 
-	// // Act
-	// err := h.Listen()
+	// Act
+	err := h.Listen()
 
-	// // Assert
-	// assert.NilError(t, err)
-	// // var fields log.Fields
-	// // if out.Len() > 0 {
-	// // 	errLog := json.Unmarshal(out.Bytes(), &fields)
-	// // 	assert.NilError(t, errLog)
-	// // }
-
-	// // for _, check := range tt.checks {
-	// // 	check(t, fields, err)
-	// // }
+	// Assert
+	assert.NilError(t, err)
+	// for _, check := range tt.checks {
+	// 	check(t, fields, err)
+	// }
 }

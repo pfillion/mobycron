@@ -24,6 +24,11 @@ RUN apk add --update --no-cache \
     tzdata \
     restic
 
+# fuse TODO: Check if dependencies for restic, useless
+# openssh-client TODO: Check if dependencies for restic, useless
+# restic TODO: With docker crontab, useless. Change example docker-compose to adapt with restic container job
+# tzdata TODO: with v3, check if it necessary with new ENV integrated in cron dirrectly
+
 COPY bin /usr/bin
 
 ENTRYPOINT [ "mobycron"]

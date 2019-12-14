@@ -7,9 +7,8 @@ package cron
 import (
 	context "context"
 	types "github.com/docker/docker/api/types"
-	events "github.com/docker/docker/api/types/events"
 	gomock "github.com/golang/mock/gomock"
-	cron_v3 "gopkg.in/robfig/cron.v3"
+	v3 "github.com/robfig/cron/v3"
 	reflect "reflect"
 	time "time"
 )
@@ -38,10 +37,10 @@ func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 }
 
 // AddJob mocks base method
-func (m *MockRunner) AddJob(spec string, cmd cron_v3.Job) (cron_v3.EntryID, error) {
+func (m *MockRunner) AddJob(spec string, cmd v3.Job) (v3.EntryID, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddJob", spec, cmd)
-	ret0, _ := ret[0].(cron_v3.EntryID)
+	ret0, _ := ret[0].(v3.EntryID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -50,6 +49,18 @@ func (m *MockRunner) AddJob(spec string, cmd cron_v3.Job) (cron_v3.EntryID, erro
 func (mr *MockRunnerMockRecorder) AddJob(spec, cmd interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJob", reflect.TypeOf((*MockRunner)(nil).AddJob), spec, cmd)
+}
+
+// Remove mocks base method
+func (m *MockRunner) Remove(id v3.EntryID) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Remove", id)
+}
+
+// Remove indicates an expected call of Remove
+func (mr *MockRunnerMockRecorder) Remove(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockRunner)(nil).Remove), id)
 }
 
 // Start mocks base method
@@ -65,9 +76,11 @@ func (mr *MockRunnerMockRecorder) Start() *gomock.Call {
 }
 
 // Stop mocks base method
-func (m *MockRunner) Stop() {
+func (m *MockRunner) Stop() context.Context {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
+	ret := m.ctrl.Call(m, "Stop")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
 }
 
 // Stop indicates an expected call of Stop
@@ -324,19 +337,4 @@ func (m *MockDockerClient) ContainerRestart(ctx context.Context, container strin
 func (mr *MockDockerClientMockRecorder) ContainerRestart(ctx, container, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerRestart", reflect.TypeOf((*MockDockerClient)(nil).ContainerRestart), ctx, container, timeout)
-}
-
-// Events mocks base method
-func (m *MockDockerClient) Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Events", ctx, options)
-	ret0, _ := ret[0].(<-chan events.Message)
-	ret1, _ := ret[1].(<-chan error)
-	return ret0, ret1
-}
-
-// Events indicates an expected call of Events
-func (mr *MockDockerClientMockRecorder) Events(ctx, options interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockDockerClient)(nil).Events), ctx, options)
 }

@@ -31,15 +31,15 @@ bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
 go-get: ## Get external packages
-	go get -u github.com/docker/docker/client
+	go get -u github.com/docker/docker/client@master
 	go get -u github.com/golang/mock/gomock
 	go get -u github.com/pkg/errors
 	go get -u github.com/sirupsen/logrus
 	go get -u github.com/spf13/afero
 	go get -u github.com/urfave/cli
 	go get -u golang.org/x/lint/golint
-	go get -u gopkg.in/robfig/cron.v3
-	go get -u gotest.tools/assert
+	go get -u github.com/robfig/cron/v3
+	go get -u gotest.tools/v3
 
 go-mock: ## Generate mock file
 	mockgen -source=$(ROOT_FOLDER)/cmd/mobycron/main.go -destination=$(ROOT_FOLDER)/cmd/mobycron/main_mock.go -package=main

@@ -14,13 +14,19 @@ import (
 
 // ContainerJob run a docker container on a schedule.
 type ContainerJob struct {
-	Schedule  string
-	Action    string
-	Timeout   string
-	Command   string
-	Container types.Container
-	cron      *Cron
-	cli       DockerClient
+	Schedule    string
+	Action      string
+	Timeout     string
+	Command     string
+	ServiceID   string
+	ServiceName string
+	TaskID      string
+	TaskName    string
+	Slot        int
+	Created     int64
+	Container   types.Container
+	cron        *Cron
+	cli         DockerClient
 }
 
 // Run a docker container and log the output.

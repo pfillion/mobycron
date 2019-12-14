@@ -3,23 +3,21 @@ services:
   cron:
     image: pfillion/mobycron:latest
     environment:
-      - TZ=America/New_York
-      - NAME=World!!!
-      - REPO__FILE=/run/secrets/restic-repo
-    configs:
-      - source: mobycron-config
-        target: /configs/config.json
-    secrets:
-      - source: restic-passwd
-        target: /configs/passwd
-      - restic-repo
+      MOBYCRON_DOCKER_MODE: 'true'
+      MOBYCRON_PARSE_SECOND: 'true'
+      CRON_TZ: America/New_York
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      mode: global
 
-configs:
-  mobycron-config:
-    external: true
-
-secrets:
-  restic-repo:
-    external: true
-  restic-passwd:
-    external: true
+  busybox:
+    image: busybox:latest
+    command: echo 'Hello World!!'
+    labels: 
+      mobycron.schedule: "*/1 * * * * *"
+      mobycron.action: "start"
+    deploy:
+      replicas: 6
+      restart_policy:
+        condition: none

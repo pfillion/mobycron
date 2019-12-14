@@ -5,6 +5,7 @@
 package main
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -59,9 +60,11 @@ func (mr *MockCronnerMockRecorder) Start() *gomock.Call {
 }
 
 // Stop mocks base method
-func (m *MockCronner) Stop() {
+func (m *MockCronner) Stop() context.Context {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
+	ret := m.ctrl.Call(m, "Stop")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
 }
 
 // Stop indicates an expected call of Stop

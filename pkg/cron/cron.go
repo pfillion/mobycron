@@ -1,23 +1,32 @@
 package cron
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
+	cron "github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
-	cron "gopkg.in/robfig/cron.v3"
 )
 
 // Cron keeps track of any number of jobs, invoking the associated Job as
 // specified by the schedule. It may be started and stopped.
 type Cron struct {
-	runner Runner
-	sync   JobSynchroniser
-	fs     afero.Fs
+	runner     Runner
+	sync       JobSynchroniser
+	fs         afero.Fs
+	jobEntries map[string]cronEntry
+}
+
+type cronEntry struct {
+	id      cron.EntryID
+	created int64
 }
 
 // NewCron return a new Cron job runner.
@@ -31,6 +40,7 @@ func NewCron(parseSecond bool) *Cron {
 		cron.New(cron.WithParser(cron.NewParser(option))),
 		&sync.WaitGroup{},
 		afero.NewOsFs(),
+		make(map[string]cronEntry),
 	}
 }
 
@@ -75,15 +85,21 @@ func (c *Cron) AddJobs(jobs []Job) error {
 
 // AddContainerJob add container job to the Cron to be run on the given schedule.
 func (c *Cron) AddContainerJob(job ContainerJob) error {
-	log.WithFields(log.Fields{
+	log := log.WithFields(log.Fields{
 		"func":            "Cron.AddContainerJob",
 		"schedule":        job.Schedule,
 		"action":          job.Action,
 		"timeout":         job.Timeout,
 		"command":         job.Command,
+		"service.ID":      job.ServiceID,
+		"service.Name":    job.ServiceName,
+		"task.ID":         job.TaskID,
+		"task.Name":       job.TaskName,
+		"slot":            job.Slot,
+		"created":         time.Unix(job.Created, 0).String(),
 		"container.ID":    job.Container.ID,
 		"container.Names": job.Container.Names,
-	}).Infoln("add container job to cron")
+	})
 
 	if job.Schedule == "" {
 		return errors.New("schedule is required")
@@ -108,11 +124,26 @@ func (c *Cron) AddContainerJob(job ContainerJob) error {
 		return errors.New("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted")
 	}
 
-	job.cron = c
+	// Check if replacement is needed
+	key := fmt.Sprintf("%s.%d", job.ServiceID, job.Slot)
+	if entry, ok := c.jobEntries[key]; ok {
+		if entry.created > job.Created {
+			log.Infoln("skip replacement, the container job is older")
+			return nil
+		}
+		c.runner.Remove(entry.id)
+		log.Infoln("replace container job in cron")
+	} else {
+		log.Infoln("add container job to cron")
+	}
 
-	if _, err := c.runner.AddJob(job.Schedule, &job); err != nil {
+	job.cron = c
+	id, err := c.runner.AddJob(job.Schedule, &job)
+	if err != nil {
 		return errors.Wrap(err, "failed to add container job in cron")
 	}
+
+	c.jobEntries[key] = cronEntry{id, job.Created}
 
 	return nil
 }
@@ -148,12 +179,15 @@ func (c *Cron) Start() {
 }
 
 // Stop the Cron scheduler.
-func (c *Cron) Stop() {
+func (c *Cron) Stop() context.Context {
 	log := log.WithFields(log.Fields{"func": "Cron.Stop"})
 
 	log.Infoln("stopping cron, wait for running jobs")
-	c.runner.Stop()
+	ctx := c.runner.Stop()
 
 	c.sync.Wait()
 	log.Infoln("cron is stopped, all jobs are completed")
+
+	// TODO: See if the new stop context can be handy
+	return ctx
 }

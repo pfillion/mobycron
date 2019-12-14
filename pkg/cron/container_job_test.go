@@ -13,8 +13,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
+	"gotest.tools/v3/assert"
+	is "gotest.tools/v3/assert/cmp"
 )
 
 func TestContainerJobRun(t *testing.T) {
@@ -389,7 +389,7 @@ func TestContainerJobRun(t *testing.T) {
 				tt.mock(s, cli)
 			}
 
-			c := &Cron{nil, s, nil}
+			c := &Cron{nil, s, nil, nil}
 			j := &ContainerJob{
 				Schedule:  tt.schedule,
 				Action:    tt.action,

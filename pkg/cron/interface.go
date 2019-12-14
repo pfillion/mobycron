@@ -1,19 +1,19 @@
 package cron
 
 import (
-	context "context"
+	"context"
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
-	cron "gopkg.in/robfig/cron.v3"
+	cron "github.com/robfig/cron/v3"
 )
 
 // Runner is an interface for testing robfig/cron
 type Runner interface {
 	AddJob(spec string, cmd cron.Job) (cron.EntryID, error)
+	Remove(id cron.EntryID)
 	Start()
-	Stop()
+	Stop() context.Context
 }
 
 // JobSynchroniser is an interface for testing sync.WaitGroup
@@ -39,5 +39,5 @@ type DockerClient interface {
 	ContainerStart(ctx context.Context, container string, options types.ContainerStartOptions) error
 	ContainerStop(ctx context.Context, container string, timeout *time.Duration) error
 	ContainerRestart(ctx context.Context, container string, timeout *time.Duration) error
-	Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
+	// Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
 }

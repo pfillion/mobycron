@@ -8,9 +8,9 @@ import (
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
-	"gotest.tools/env"
+	"gotest.tools/v3/assert"
+	is "gotest.tools/v3/assert/cmp"
+	"gotest.tools/v3/env"
 )
 
 func TestJobRun(t *testing.T) {
@@ -196,7 +196,7 @@ func TestJobRun(t *testing.T) {
 				tt.mock(s)
 			}
 
-			c := &Cron{nil, s, fs}
+			c := &Cron{nil, s, fs, nil}
 			j := &Job{"3 * * * * *", tt.command, tt.args, c}
 
 			// Act
