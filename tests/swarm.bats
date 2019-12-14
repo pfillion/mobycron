@@ -46,7 +46,10 @@ function container_action_completed_successfully() {
 
 	# Assert
 	retry 10 1 container_action_completed_successfully ${SERVICE_NAME} 4
-    assert [ $(docker service logs ${DOER1_SERVICE} | uniq | wc -l) -eq 2 ]
+    run docker service logs ${SERVICE_NAME}
+    assert_output --regexp 'add container job to cron.*add container job to cron'
+    assert_output --regexp ${DOER1_SERVICE}'\.1.*container action completed successfully'
+    assert_output --regexp ${DOER1_SERVICE}'\.2.*container action completed successfully'
 }
 
 @test "start container only from active service task" {
@@ -69,5 +72,4 @@ function container_action_completed_successfully() {
     refute_output --regexp 'container action completed successfully.*\* \* \* \* \* 1'
 }
 
-# TODO: test with replicas. each replica must added in cron
 # TODO: test events (add to swarm, remove from swarm, update from swarm)
