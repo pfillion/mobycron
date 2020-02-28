@@ -25,11 +25,15 @@ function container_action_completed_successfully() {
 	[ $(docker logs $1 | grep -c 'container action completed successfully') -ge $2 ]
 }
 
+function remove_container_job_from_cron() {
+	[ $(docker logs $1 | grep -c 'remove container job from cron') -ge $2 ]
+}
+
 function exit_fatal() {
 	[ $(docker logs $1 | grep -c 'fatal') -ge $2 ]
 }
 
-@test "container - config file only with multiple jobs" {
+@test "container scan - config file only with multiple jobs" {
     # Act
     # Prevent Bug: Only last job is executed. It is due to use of range and invalid use of pointer in Cron.AddJobs
     docker run -d -e MOBYCRON_DOCKER_MODE=false -e MOBYCRON_PARSE_SECOND=true -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
@@ -41,7 +45,7 @@ function exit_fatal() {
     assert_output --regexp 'job completed successfully.*Hello Bob'
 }
 
-@test "container - parse second not permitted" {
+@test "container scan - parse second not permitted" {
     # Act
     docker run -d -e MOBYCRON_DOCKER_MODE=false -e MOBYCRON_PARSE_SECOND=false -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
@@ -51,7 +55,7 @@ function exit_fatal() {
 	assert_output --regexp 'failed to add jobs fron config file'
 }
 
-@test "container - start container" {
+@test "container scan - start container" {
     # Arrange
     docker create --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
     
@@ -64,7 +68,7 @@ function exit_fatal() {
 	assert_output --regexp 'Do job'
 }
 
-@test "container - restart container" {
+@test "container scan - restart container" {
     # Arrange
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='restart' busybox echo 'Do job'
 
@@ -77,7 +81,7 @@ function exit_fatal() {
 	assert_output --regexp 'Do job.*Do job'
 }
 
-@test "container - stop container" {
+@test "container scan - stop container" {
     # Arrange
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.timeout='1' -l mobycron.action='stop' busybox sh -c ' sleep 100 && echo ''Do job'''
     
@@ -90,7 +94,7 @@ function exit_fatal() {
 	assert_output ''
 }
 
-@test "container - exec container" {
+@test "container scan - exec container" {
     # Arrange
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job''' busybox sleep 100
    
@@ -103,7 +107,7 @@ function exit_fatal() {
     assert_output --regexp 'Do job'
 }
 
-@test "container - multiple containers" {
+@test "container scan - multiple containers" {
     # Arrange
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job1''' busybox sleep 100
     docker run -d --name ${DOER2_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job2''' busybox sleep 100
@@ -112,24 +116,47 @@ function exit_fatal() {
     docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
-    retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
+    retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 2
     run docker logs ${CONTAINER_NAME}
     assert_output --regexp 'container action completed successfully.*Do job1'
     assert_output --regexp 'container action completed successfully.*Do job2'
 }
 
-# @test "container - server create container" {
-#     # Arrange
-#     docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+@test "container listen - server create container" {
+    # Arrange
+    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
     
-#     # Act
-#     docker create --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
+    # Act
+    docker create --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
 	
-#     # Assert
-#     # retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
-#     # run docker logs ${DOER1_CONTAINER_NAME}
-# 	# assert_output --regexp 'Do job'
+    # Assert
+    retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 2
+    run docker logs ${DOER1_CONTAINER_NAME}
+	assert_output --regexp 'Do job'
+}
 
-#     run docker logs ${CONTAINER_NAME}
-#     assert_output --regexp 'container action completed successfully.*Do job1'
-# }
+@test "container listen - server run container" {
+    # Arrange
+    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    
+    # Act
+    docker run --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
+	
+    # Assert
+    retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 2
+    run docker logs ${DOER1_CONTAINER_NAME}
+	assert_output --regexp 'Do job'
+}
+
+@test "container listen - server remove container" {
+    # Arrange
+    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
+    retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
+
+    # Act
+    docker rm -f ${DOER1_CONTAINER_NAME}
+	
+    # Assert
+    retry 5 1 remove_container_job_from_cron ${CONTAINER_NAME} 1
+}

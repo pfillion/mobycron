@@ -186,6 +186,18 @@ func (mr *MockCronnerMockRecorder) AddContainerJob(job interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContainerJob", reflect.TypeOf((*MockCronner)(nil).AddContainerJob), job)
 }
 
+// RemoveContainerJob mocks base method
+func (m *MockCronner) RemoveContainerJob(ID string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RemoveContainerJob", ID)
+}
+
+// RemoveContainerJob indicates an expected call of RemoveContainerJob
+func (mr *MockCronnerMockRecorder) RemoveContainerJob(ID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveContainerJob", reflect.TypeOf((*MockCronner)(nil).RemoveContainerJob), ID)
+}
+
 // MockDockerClient is a mock of DockerClient interface
 type MockDockerClient struct {
 	ctrl     *gomock.Controller

@@ -36,7 +36,11 @@ function container_action_completed_successfully() {
 	[ $(docker service logs $1 | grep -c 'container action completed successfully') -ge $2 ]
 }
 
-@test "swarm - start all replicas from service" {
+function remove_container_job_from_cron() {
+	[ $(docker service logs $1 | grep -c 'remove container job from cron') -ge $2 ]
+}
+
+@test "swarm scan - start all replicas from service" {
     # Arrange
     docker service create -d --name ${DOER1_SERVICE} --replicas=2 --restart-condition=none --container-label=mobycron.schedule='* * * * * *' --container-label=mobycron.action='start' busybox hostname
     retry 10 1 service_is_ready ${DOER1_SERVICE} "hostname" "shutdown" 2
@@ -52,7 +56,7 @@ function container_action_completed_successfully() {
     assert_output --regexp ${DOER1_SERVICE}'\.2.*container action completed successfully'
 }
 
-@test "swarm - start container only from active service task" {
+@test "swarm scan - start container only from active service task" {
 	# Arrange
     docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='* * * * * 1' --container-label=mobycron.action='start' busybox echo 'job1'
     retry 10 1 service_is_ready ${DOER1_SERVICE} "job1" "shutdown" 1
@@ -72,4 +76,47 @@ function container_action_completed_successfully() {
     refute_output --regexp 'container action completed successfully.*\* \* \* \* \* 1'
 }
 
-# TODO: test events (add to swarm, remove from swarm, update from swarm)
+@test "swarm listen - add service" {
+	# Arrange
+    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+	
+    # Act
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='* * * * * *' --container-label=mobycron.action='start' busybox echo 'job1'
+
+	# Assert
+    retry 10 1 service_is_ready ${DOER1_SERVICE} "job1" "shutdown" 1
+    retry 10 1 container_action_completed_successfully ${SERVICE_NAME} 1
+}
+
+@test "swarm listen - update service" {
+	# Arrange
+    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='* * * * * *' --container-label=mobycron.action='start' busybox echo 'job1'
+	
+    retry 10 1 service_is_ready ${DOER1_SERVICE} "job1" "shutdown" 1
+
+    # Act
+    docker service update -d --args "echo 'job2'" ${DOER1_SERVICE}
+
+	# Assert
+    retry 10 1 service_is_ready ${DOER1_SERVICE} "job2" "shutdown" 1
+    retry 10 1 container_action_completed_successfully ${SERVICE_NAME} 4
+    
+    run docker service logs ${SERVICE_NAME}
+    assert_output --regexp 'add container job to cron.*replace container job in cron'
+}
+
+@test "swarm listen - remove service" {
+	# Arrange
+    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='* * * * * *' --container-label=mobycron.action='start' busybox echo 'job1'
+
+    retry 10 1 service_is_ready ${DOER1_SERVICE} "job1" "shutdown" 1
+    retry 10 1 container_action_completed_successfully ${SERVICE_NAME} 1
+    
+	# Act
+    docker service rm ${DOER1_SERVICE}
+  
+	# Assert
+    retry 10 1 remove_container_job_from_cron ${SERVICE_NAME} 1
+}

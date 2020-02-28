@@ -27,6 +27,7 @@ type JobSynchroniser interface {
 // Cronner is an interface for adding job to cron
 type Cronner interface {
 	AddContainerJob(job ContainerJob) error
+	RemoveContainerJob(ID string)
 }
 
 // DockerClient is the client for docker

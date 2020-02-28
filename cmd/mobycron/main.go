@@ -91,9 +91,11 @@ func startApp(ctx *cli.Context) error {
 
 	cronner.Stop()
 	// TODO: Refactoring of all test for check log with Fields like handler_test working with output but with field and value
+	// TODO: Refactoring of all log Fields to manage sub object ex: event.ID event.Actor.ID. It will be ready for kibana and elasticsearch
 	// TODO: Migrate to urfave/cli/v2
 	// TODO: Refactoring all tests for verify all fields logged in the main test case
 	// TODO: change label action to be 'start' by default
+	// TODO: evaluate if we need to manage 'Exec' action when the container stop or die
 
 	return nil
 }

@@ -3,7 +3,6 @@ package cron
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,8 +24,10 @@ type Cron struct {
 }
 
 type cronEntry struct {
-	id      cron.EntryID
-	created int64
+	ID        cron.EntryID
+	serviceID string
+	slot      int
+	created   int64
 }
 
 // NewCron return a new Cron job runner.
@@ -124,28 +125,46 @@ func (c *Cron) AddContainerJob(job ContainerJob) error {
 		return errors.New("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted")
 	}
 
-	// Check if replacement is needed
-	key := fmt.Sprintf("%s.%d", job.ServiceID, job.Slot)
-	if entry, ok := c.jobEntries[key]; job.ServiceID != "" && ok {
-		if entry.created > job.Created {
-			log.Infoln("skip replacement, the container job is older")
-			return nil
+	// Check if replacement is needed for service
+	msg := "add container job to cron"
+	if job.ServiceID != "" {
+		for _, entry := range c.jobEntries {
+			if entry.serviceID == job.ServiceID && entry.slot == job.Slot {
+				if entry.created > job.Created {
+					log.Infoln("skip replacement, the container job is older")
+					return nil
+				}
+				c.runner.Remove(entry.ID)
+				msg = "replace container job in cron"
+				break
+			}
 		}
-		c.runner.Remove(entry.id)
-		log.Infoln("replace container job in cron")
-	} else {
-		log.Infoln("add container job to cron")
 	}
+	log.Infoln(msg)
 
 	job.cron = c
-	id, err := c.runner.AddJob(job.Schedule, &job)
+	ID, err := c.runner.AddJob(job.Schedule, &job)
 	if err != nil {
 		return errors.Wrap(err, "failed to add container job in cron")
 	}
 
-	c.jobEntries[key] = cronEntry{id, job.Created}
+	c.jobEntries[job.Container.ID] = cronEntry{ID, job.ServiceID, job.Slot, job.Created}
 
 	return nil
+}
+
+// RemoveContainerJob remove container job from Cron.
+func (c *Cron) RemoveContainerJob(ID string) {
+	if entry, ok := c.jobEntries[ID]; ok {
+		delete(c.jobEntries, ID)
+		c.runner.Remove(entry.ID)
+
+		log := log.WithFields(log.Fields{
+			"func":         "Cron.RemoveContainerJob",
+			"container.ID": ID,
+		})
+		log.Infoln("remove container job from cron")
+	}
 }
 
 // LoadConfig read Job from file in JSON format and add them to Cron.
