@@ -48,6 +48,7 @@ go-mock: ## Generate mock file
 go-build: ## Build go app
 	golint -set_exit_status ./...
 	go vet -v ./...
+	go mod tidy -v
 	GOOS=${GOOS} GOARCH=${GOARCH} go build -o $(BIN_FOLDER)/$(APP_NAME) -v $(APP_FOLDER)
 
 go-rebuild: go-clean go-build ## Rebuild go app
