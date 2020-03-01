@@ -31,7 +31,7 @@ bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
 go-get: ## Get external packages
-	go get -u github.com/docker/docker/client@master
+	go get -u github.com/docker/docker/client@v19.03.6
 	go get -u github.com/golang/mock/gomock
 	go get -u github.com/pkg/errors
 	go get -u github.com/sirupsen/logrus
@@ -48,7 +48,6 @@ go-mock: ## Generate mock file
 go-build: ## Build go app
 	golint -set_exit_status ./...
 	go vet -v ./...
-	go mod tidy -v
 	GOOS=${GOOS} GOARCH=${GOARCH} go build -o $(BIN_FOLDER)/$(APP_NAME) -v $(APP_FOLDER)
 
 go-rebuild: go-clean go-build ## Rebuild go app
