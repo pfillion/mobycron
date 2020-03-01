@@ -470,7 +470,7 @@ func TestRemoveContainerJob(t *testing.T) {
 		{
 			name:       "ID not exist",
 			ID:         "ID22222",
-			jobEntries: map[string]cronEntry{"ID1": cronEntry{}},
+			jobEntries: map[string]cronEntry{"ID1": {}},
 			checks: check(
 				hasJobEntries("ID1", cronEntry{}),
 				hasNoLog(),
@@ -479,7 +479,7 @@ func TestRemoveContainerJob(t *testing.T) {
 		{
 			name:       "ID exist",
 			ID:         "ID1",
-			jobEntries: map[string]cronEntry{"ID1": cronEntry{ID: cron.EntryID(111)}},
+			jobEntries: map[string]cronEntry{"ID1": {ID: cron.EntryID(111)}},
 			mock: func(r *MockRunner, c *Cron) {
 				r.EXPECT().Remove(cron.EntryID(111))
 			},
