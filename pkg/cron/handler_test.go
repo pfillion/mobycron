@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -51,6 +52,12 @@ func TestScan(t *testing.T) {
 
 	type mockFunc func(*MockCronner, *MockDockerClient)
 
+	hasError := func(want string) checkFunc {
+		return func(t *testing.T, out string, err error) {
+			assert.Assert(t, is.ErrorContains(err, want))
+		}
+	}
+
 	hasNilError := func() checkFunc {
 		return func(t *testing.T, out string, err error) {
 			assert.NilError(t, err)
@@ -76,6 +83,7 @@ func TestScan(t *testing.T) {
 
 				opt := types.ContainerListOptions{All: true, Filters: args}
 				cli.EXPECT().ContainerList(gomock.Any(), opt).Return(nil, nil)
+				cli.EXPECT().ServiceList(gomock.Any(), gomock.Any()).Return([]swarm.Service{}, nil)
 				cli.EXPECT().Close()
 			},
 			checks: check(
@@ -83,6 +91,27 @@ func TestScan(t *testing.T) {
 				hasLogField("level", "info"),
 				hasLogField("func", "Handler.Scan"),
 				hasLogField("msg", "scan containers for cron schedule"),
+			),
+		},
+		{
+			name: "addContainers in error",
+			mock: func(sc *MockCronner, cli *MockDockerClient) {
+				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(nil, errors.New("addContainers in error"))
+				cli.EXPECT().Close()
+			},
+			checks: check(
+				hasError("addContainers in error"),
+			),
+		},
+		{
+			name: "prune container from service",
+			mock: func(sc *MockCronner, cli *MockDockerClient) {
+				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(nil, nil)
+				cli.EXPECT().ServiceList(gomock.Any(), gomock.Any()).Return([]swarm.Service{}, nil)
+				cli.EXPECT().Close()
+			},
+			checks: check(
+				hasNilError(),
 			),
 		},
 	}
@@ -114,27 +143,15 @@ func TestScan(t *testing.T) {
 	}
 }
 
-func TestListen(t *testing.T) {
-	type checkFunc func(*testing.T, string, error)
+func TestListenContainer(t *testing.T) {
+	type checkFunc func(*testing.T, string)
 	check := func(fns ...checkFunc) []checkFunc { return fns }
 
 	type mockFunc func(*MockCronner, *MockDockerClient, chan events.Message, chan error)
 	type eventFunc func(chan events.Message, chan error)
 
-	// hasError := func(want string) checkFunc {
-	// 	return func(t *testing.T, out string, err error) {
-	// 		assert.Assert(t, is.ErrorContains(err, want))
-	// 	}
-	// }
-
-	hasNilError := func() checkFunc {
-		return func(t *testing.T, out string, err error) {
-			assert.NilError(t, err)
-		}
-	}
-
 	hasLogField := func(field string, want string) checkFunc {
-		return func(t *testing.T, out string, err error) {
+		return func(t *testing.T, out string) {
 			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
 		}
 	}
@@ -150,6 +167,7 @@ func TestListen(t *testing.T) {
 			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
 				eventOpt := types.EventsOptions{Filters: filters.NewArgs()}
 				eventOpt.Filters.Add("label", "mobycron.schedule")
+				eventOpt.Filters.Add("type", "container")
 				eventOpt.Filters.Add("event", "create")
 				eventOpt.Filters.Add("event", "destroy")
 
@@ -164,7 +182,6 @@ func TestListen(t *testing.T) {
 				eventChan <- events.Message{Action: "create", Actor: events.Actor{ID: "1"}}
 			},
 			checks: check(
-				hasNilError(),
 				hasLogField("level", "info"),
 				hasLogField("func", "Handler.Listen"),
 				hasLogField("msg", "event message from server"),
@@ -196,7 +213,6 @@ func TestListen(t *testing.T) {
 				eventChan <- events.Message{Action: "destroy", Actor: events.Actor{ID: "1"}}
 			},
 			checks: check(
-				hasNilError(),
 				hasLogField("level", "info"),
 				hasLogField("func", "Handler.Listen"),
 				hasLogField("msg", "event message from server"),
@@ -257,13 +273,131 @@ func TestListen(t *testing.T) {
 			}
 
 			// Act
-			err := h.Listen()
+			h.ListenContainer()
 			go tt.events(eventChan, errChan)
 			time.Sleep(5 * time.Millisecond)
 
 			// Assert
 			for _, check := range tt.checks {
-				check(t, out.String(), err)
+				check(t, out.String())
+			}
+		})
+	}
+}
+
+func TestListenService(t *testing.T) {
+	type checkFunc func(*testing.T, string)
+	check := func(fns ...checkFunc) []checkFunc { return fns }
+
+	type mockFunc func(*MockCronner, *MockDockerClient, chan events.Message, chan error)
+	type eventFunc func(chan events.Message, chan error)
+
+	hasLogField := func(field string, want string) checkFunc {
+		return func(t *testing.T, out string) {
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
+		}
+	}
+
+	tests := []struct {
+		name   string
+		mock   mockFunc
+		events eventFunc
+		checks []checkFunc
+	}{
+		{
+			name: "service updated - prune container from service",
+			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
+				eventOpt := types.EventsOptions{Filters: filters.NewArgs()}
+				eventOpt.Filters.Add("type", "service")
+				eventOpt.Filters.Add("event", "update")
+
+				cli.EXPECT().Events(gomock.Any(), eventOpt).Return(eventChan, errChan)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), "S1", gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, nil)
+				cli.EXPECT().Close()
+			},
+			events: func(eventChan chan events.Message, errChan chan error) {
+				eventChan <- events.Message{Action: "update", Actor: events.Actor{ID: "S1"}}
+			},
+		},
+		{
+			name: "service updated - prune container from service in error",
+			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
+				cli.EXPECT().Events(gomock.Any(), gomock.Any()).Return(eventChan, errChan)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, errors.New("prune in error"))
+				cli.EXPECT().Close()
+			},
+			events: func(eventChan chan events.Message, errChan chan error) {
+				eventChan <- events.Message{Action: "update", Actor: events.Actor{ID: "S1"}}
+			},
+			checks: check(
+				hasLogField("level", "error"),
+				hasLogField("msg", "prune in error"),
+			),
+		},
+		{
+			name: "error on channel",
+			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
+				cli.EXPECT().Events(gomock.Any(), gomock.Any()).Return(eventChan, errChan).Times(2)
+			},
+			events: func(eventChan chan events.Message, errChan chan error) {
+				errChan <- errors.New("error on channel")
+			},
+			checks: check(
+				hasLogField("level", "error"),
+				hasLogField("msg", "error from server"),
+				hasLogField("error", "error on channel"),
+			),
+		},
+		{
+			name: "mix of message and error on channels",
+			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
+				cli.EXPECT().Events(gomock.Any(), gomock.Any()).Return(eventChan, errChan).Times(2)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, nil).Times(2)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, nil).Times(2)
+				cli.EXPECT().Close().Times(2)
+			},
+			events: func(eventChan chan events.Message, errChan chan error) {
+				eventChan <- events.Message{Action: "create", Actor: events.Actor{ID: "1"}}
+				errChan <- errors.New("error on channel")
+				eventChan <- events.Message{Action: "create", Actor: events.Actor{ID: "2"}}
+			},
+			checks: check(
+				hasLogField("actor.ID", "1"),
+				hasLogField("actor.ID", "2"),
+				hasLogField("error", "error on channel"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			out := &bytes.Buffer{}
+			log.SetOutput(out)
+
+			eventChan := make(chan events.Message)
+			errChan := make(chan error)
+
+			// Mock
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cron := NewMockCronner(ctrl)
+			cli := NewMockDockerClient(ctrl)
+
+			h := &Handler{cron, cli}
+			if tt.mock != nil {
+				tt.mock(cron, cli, eventChan, errChan)
+			}
+
+			// Act
+			h.ListenService()
+			go tt.events(eventChan, errChan)
+			time.Sleep(5 * time.Millisecond)
+
+			// Assert
+			for _, check := range tt.checks {
+				check(t, out.String())
 			}
 		})
 	}
@@ -304,7 +438,6 @@ func TestAddContainers(t *testing.T) {
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return([]types.Container{}, nil)
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -337,7 +470,6 @@ func TestAddContainers(t *testing.T) {
 					cron:      nil,
 					cli:       cli,
 				})
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -391,7 +523,6 @@ func TestAddContainers(t *testing.T) {
 					cron:      nil,
 					cli:       cli,
 				})
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -427,7 +558,6 @@ func TestAddContainers(t *testing.T) {
 					Container:   containers[0],
 					cli:         cli,
 				})
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -445,7 +575,6 @@ func TestAddContainers(t *testing.T) {
 					},
 				}
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(containers, nil)
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -458,7 +587,6 @@ func TestAddContainers(t *testing.T) {
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(nil, errors.New("ContainerList in error"))
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasError("ContainerList in error"),
@@ -471,7 +599,6 @@ func TestAddContainers(t *testing.T) {
 				containers := []types.Container{{ID: "1"}}
 				cli.EXPECT().ContainerList(gomock.Any(), gomock.Any()).Return(containers, nil)
 				sc.EXPECT().AddContainerJob(gomock.Any()).Return(errors.New("AddContainerJob in error"))
-				cli.EXPECT().Close()
 			},
 			checks: check(
 				hasNilError(),
@@ -504,6 +631,330 @@ func TestAddContainers(t *testing.T) {
 			// Assert
 			for _, check := range tt.checks {
 				check(t, out.String(), err)
+			}
+		})
+	}
+}
+
+func TestPruneContainersFromService(t *testing.T) {
+	type checkFunc func(*testing.T, string, error)
+	check := func(fns ...checkFunc) []checkFunc { return fns }
+
+	type mockFunc func(*MockCronner, *MockDockerClient)
+
+	hasError := func(want string) checkFunc {
+		return func(t *testing.T, out string, err error) {
+			assert.Assert(t, is.ErrorContains(err, want))
+		}
+	}
+
+	hasNilError := func() checkFunc {
+		return func(t *testing.T, out string, err error) {
+			assert.NilError(t, err)
+		}
+	}
+
+	tests := []struct {
+		name      string
+		serviceID string
+		mock      mockFunc
+		checks    []checkFunc
+	}{
+		{
+			name:      "one container to prune",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				serviceOpt := types.ServiceInspectOptions{}
+				service := swarm.Service{Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "s1"}}}
+
+				ctx := context.Background()
+				filters := filters.NewArgs()
+				filters.Add("service", "s1")
+				taskOpt := types.TaskListOptions{Filters: filters}
+
+				tasks := []swarm.Task{
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c1"}},
+					},
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 2, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c2"}},
+					},
+				}
+
+				cli.EXPECT().ServiceInspectWithRaw(ctx, "s1", serviceOpt).Return(service, nil, nil)
+				cli.EXPECT().TaskList(ctx, taskOpt).Return(tasks, nil)
+				cron.EXPECT().RemoveContainerJob("c1")
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "many containers to prune",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				tasks := []swarm.Task{
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c1"}},
+					},
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 3, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c2"}},
+					},
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 2, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c3"}},
+					},
+				}
+
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return(tasks, nil)
+				cron.EXPECT().RemoveContainerJob("c1")
+				cron.EXPECT().RemoveContainerJob("c3")
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "no container to prune - not same slot",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				tasks := []swarm.Task{
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c1"}},
+					},
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 2, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      2,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c2"}},
+					},
+				}
+
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return(tasks, nil)
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "no container to prune - only one task",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				tasks := []swarm.Task{
+					{
+						Meta:      swarm.Meta{CreatedAt: time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)},
+						ServiceID: "s1",
+						Slot:      1,
+						Status:    swarm.TaskStatus{ContainerStatus: &swarm.ContainerStatus{ContainerID: "c1"}},
+					},
+				}
+
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return(tasks, nil)
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "no task found",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, nil)
+			},
+			checks: check(
+				hasNilError(),
+			),
+		},
+		{
+			name:      "TaskList error",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, errors.New("TaskList error"))
+			},
+			checks: check(
+				hasError("TaskList error"),
+			),
+		},
+		{
+			name:      "ServiceInspectWithRaw error",
+			serviceID: "s1",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, errors.New("ServiceInspectWithRaw error"))
+			},
+			checks: check(
+				hasError("ServiceInspectWithRaw error"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			out := &bytes.Buffer{}
+			log.SetOutput(out)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cron := NewMockCronner(ctrl)
+			cli := NewMockDockerClient(ctrl)
+
+			h := &Handler{cron, cli}
+			if tt.mock != nil {
+				tt.mock(cron, cli)
+			}
+
+			// Act
+			err := h.pruneContainersFromService(tt.serviceID)
+
+			// Assert
+			for _, check := range tt.checks {
+				check(t, out.String(), err)
+			}
+		})
+	}
+}
+
+func TestPruneContainersFromAllServices(t *testing.T) {
+	type checkFunc func(*testing.T, string)
+	check := func(fns ...checkFunc) []checkFunc { return fns }
+
+	type mockFunc func(*MockCronner, *MockDockerClient)
+
+	hasLogField := func(field string, want string) checkFunc {
+		return func(t *testing.T, out string) {
+			assert.Assert(t, is.Contains(out, fmt.Sprintf("\"%s\":\"%s\"", field, want)))
+		}
+	}
+
+	tests := []struct {
+		name   string
+		mock   mockFunc
+		checks []checkFunc
+	}{
+		{
+			name: "one service to prune",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				ctx := context.Background()
+				services := []swarm.Service{
+					{
+						ID: "s1",
+					},
+				}
+
+				cli.EXPECT().ServiceList(ctx, types.ServiceListOptions{}).Return(services, nil)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), "s1", gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, nil)
+			},
+		},
+		{
+			name: "many services to prune",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				ctx := context.Background()
+				services := []swarm.Service{
+					{
+						ID: "s1",
+					},
+					{
+						ID: "s2",
+					},
+				}
+
+				cli.EXPECT().ServiceList(ctx, types.ServiceListOptions{}).Return(services, nil)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), "s1", gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, nil)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), "s2", gomock.Any()).Return(swarm.Service{}, nil, nil)
+				cli.EXPECT().TaskList(gomock.Any(), gomock.Any()).Return([]swarm.Task{}, nil)
+			},
+		},
+		{
+			name: "no services to prune",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				ctx := context.Background()
+				services := []swarm.Service{}
+				cli.EXPECT().ServiceList(ctx, types.ServiceListOptions{}).Return(services, nil)
+			},
+		},
+		{
+			name: "ServiceList in error",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				ctx := context.Background()
+				services := []swarm.Service{
+					{
+						ID: "s1",
+					},
+				}
+
+				cli.EXPECT().ServiceList(ctx, types.ServiceListOptions{}).Return(services, errors.New("ServiceList in error"))
+			},
+			checks: check(
+				hasLogField("level", "error"),
+				hasLogField("msg", "ServiceList in error"),
+			),
+		},
+		{
+			name: "pruneContainersFromService in error",
+			mock: func(cron *MockCronner, cli *MockDockerClient) {
+				ctx := context.Background()
+				services := []swarm.Service{
+					{
+						ID: "s1",
+					},
+				}
+
+				cli.EXPECT().ServiceList(ctx, types.ServiceListOptions{}).Return(services, nil)
+				cli.EXPECT().ServiceInspectWithRaw(gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.Service{}, nil, errors.New("pruneContainersFromService in error"))
+			},
+			checks: check(
+				hasLogField("level", "error"),
+				hasLogField("msg", "pruneContainersFromService in error"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			out := &bytes.Buffer{}
+			log.SetOutput(out)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cron := NewMockCronner(ctrl)
+			cli := NewMockDockerClient(ctrl)
+
+			h := &Handler{cron, cli}
+			if tt.mock != nil {
+				tt.mock(cron, cli)
+			}
+
+			// Act
+			h.pruneContainersFromAllServices()
+
+			// Assert
+			for _, check := range tt.checks {
+				check(t, out.String())
 			}
 		})
 	}

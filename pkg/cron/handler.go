@@ -2,11 +2,13 @@ package cron
 
 import (
 	context "context"
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 )
@@ -38,22 +40,23 @@ func (h *Handler) Scan() error {
 
 	f := filters.NewArgs()
 	f.Add("label", "mobycron.schedule")
-	return h.addContainers(f)
+
+	defer h.cli.Close()
+
+	err := h.addContainers(f)
+	if err != nil {
+		return err
+	}
+	h.pruneContainersFromAllServices()
+	return nil
 }
 
-// Listen docker message for containers with cron schedule
-func (h *Handler) Listen() error {
+// ListenContainer listen docker message for containers with cron schedule
+func (h *Handler) ListenContainer() {
 	filterArgs := filters.NewArgs()
 	filterArgs.Add("label", "mobycron.schedule")
-
-	// // Adds the cron job
-	// filterArgs.Add("event", "start")
+	filterArgs.Add("type", "container")
 	filterArgs.Add("event", "create")
-
-	// filterArgs.Add("event", "stop")
-	// filterArgs.Add("event", "die")
-
-	// // removes from the cron queue
 	filterArgs.Add("event", "destroy")
 
 	eventOptions := types.EventsOptions{Filters: filterArgs}
@@ -78,15 +81,16 @@ func (h *Handler) Listen() error {
 					})
 					log.Infoln("event message from server")
 
-					f := filters.NewArgs()
-					f.Add("id", event.Actor.ID)
+					if event.Action == "create" {
+						f := filters.NewArgs()
+						f.Add("id", event.Actor.ID)
 
-					switch event.Action {
-					case "create":
 						if err := h.addContainers(f); err != nil {
 							log.Errorln(err)
 						}
-					case "destroy":
+						h.cli.Close()
+					}
+					if event.Action == "destroy" {
 						h.cron.RemoveContainerJob(event.Actor.ID)
 					}
 
@@ -101,8 +105,52 @@ func (h *Handler) Listen() error {
 		}
 	}
 	go listen()
+}
 
-	return nil
+// ListenService listen docker message for services with cron schedule
+func (h *Handler) ListenService() {
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("type", "service")
+	filterArgs.Add("event", "update")
+
+	eventOptions := types.EventsOptions{Filters: filterArgs}
+
+	listen := func() {
+	listenLoop:
+		for {
+			ctx, cancelFunc := context.WithCancel(context.Background())
+			eventChan, errChan := h.cli.Events(ctx, eventOptions)
+			for {
+				select {
+				case event := <-eventChan:
+					log := log.WithFields(log.Fields{
+						"func":     "Handler.ListenService",
+						"Status":   event.Status,
+						"ID":       event.ID,
+						"From":     event.From,
+						"Type":     event.Type,
+						"action":   event.Action,
+						"actor.ID": event.Actor.ID,
+						"Scope":    event.Scope,
+					})
+					log.Infoln("event message from server")
+
+					if err := h.pruneContainersFromService(event.Actor.ID); err != nil {
+						log.Errorln(err)
+					}
+					h.cli.Close()
+
+				case err := <-errChan:
+					log.WithFields(log.Fields{
+						"func": "Handler.ListenService",
+					}).WithError(err).Errorln("error from server")
+					cancelFunc()
+					continue listenLoop
+				}
+			}
+		}
+	}
+	go listen()
 }
 
 func (h *Handler) addContainers(filters filters.Args) error {
@@ -110,9 +158,6 @@ func (h *Handler) addContainers(filters filters.Args) error {
 		"func": "Handler.addContainers",
 	})
 	log.Infoln("add containers from filters")
-	// TODO: this log is useless
-
-	defer h.cli.Close()
 
 	containers, err := h.cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: filters})
 	if err != nil {
@@ -147,4 +192,57 @@ func (h *Handler) addContainers(filters filters.Args) error {
 		}
 	}
 	return nil
+}
+
+func (h *Handler) pruneContainersFromService(serviceID string) error {
+	service, _, err := h.cli.ServiceInspectWithRaw(context.Background(), serviceID, types.ServiceInspectOptions{})
+	if err != nil {
+		return err
+	}
+
+	f := filters.NewArgs()
+	f.Add("service", service.Spec.Name)
+	opt := types.TaskListOptions{Filters: f}
+
+	tasks, err := h.cli.TaskList(context.Background(), opt)
+	if err != nil {
+		return err
+	}
+
+	tasksBySlot := make(map[string]swarm.Task)
+
+	for _, task := range tasks {
+		key := fmt.Sprintf("%s.%d", task.ServiceID, task.Slot)
+		latestTask, ok := tasksBySlot[key]
+
+		if !ok {
+			tasksBySlot[key] = task
+		} else if latestTask.CreatedAt.Before(task.CreatedAt) {
+			tasksBySlot[key] = task
+			h.cron.RemoveContainerJob(latestTask.Status.ContainerStatus.ContainerID)
+		} else {
+			h.cron.RemoveContainerJob(task.Status.ContainerStatus.ContainerID)
+		}
+	}
+
+	return nil
+}
+
+func (h *Handler) pruneContainersFromAllServices() {
+	log := log.WithFields(log.Fields{
+		"func": "Handler.pruneContainersFromAllServices",
+	})
+
+	services, err := h.cli.ServiceList(context.Background(), types.ServiceListOptions{})
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	for _, service := range services {
+		err = h.pruneContainersFromService(service.ID)
+		if err != nil {
+			log.WithField("serviceID", service.ID).Errorln(err)
+		}
+	}
 }

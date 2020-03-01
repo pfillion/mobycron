@@ -15,7 +15,7 @@ services:
     image: busybox:latest
     command: echo 'Hello World!!'
     labels: 
-      mobycron.schedule: "*/1 * * * * *"
+      mobycron.schedule: "*/30 * * * * *"
       mobycron.action: "start"
     deploy:
       replicas: 6

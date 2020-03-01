@@ -125,22 +125,7 @@ func (c *Cron) AddContainerJob(job ContainerJob) error {
 		return errors.New("invalid container action, only 'start', 'restart', 'stop' and 'exec' are permitted")
 	}
 
-	// Check if replacement is needed for service
-	msg := "add container job to cron"
-	if job.ServiceID != "" {
-		for _, entry := range c.jobEntries {
-			if entry.serviceID == job.ServiceID && entry.slot == job.Slot {
-				if entry.created > job.Created {
-					log.Infoln("skip replacement, the container job is older")
-					return nil
-				}
-				c.runner.Remove(entry.ID)
-				msg = "replace container job in cron"
-				break
-			}
-		}
-	}
-	log.Infoln(msg)
+	log.Infoln("add container job to cron")
 
 	job.cron = c
 	ID, err := c.runner.AddJob(job.Schedule, &job)

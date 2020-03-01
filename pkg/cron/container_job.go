@@ -40,6 +40,7 @@ func (j *ContainerJob) Run() {
 		"container.ID":    j.Container.ID,
 		"container.Names": strings.Join(j.Container.Names, ","),
 	})
+	// TODO: add all property of COntainerJob in log Fields
 
 	j.cron.sync.Add(1)
 	defer j.cron.sync.Done()

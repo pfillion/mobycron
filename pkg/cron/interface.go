@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/swarm"
 	cron "github.com/robfig/cron/v3"
 )
 
@@ -42,4 +43,7 @@ type DockerClient interface {
 	ContainerStop(ctx context.Context, container string, timeout *time.Duration) error
 	ContainerRestart(ctx context.Context, container string, timeout *time.Duration) error
 	Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
+	ServiceInspectWithRaw(ctx context.Context, serviceID string, options types.ServiceInspectOptions) (swarm.Service, []byte, error)
+	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
+	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 }

@@ -110,16 +110,26 @@ func (mr *MockHandlerMockRecorder) Scan() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scan", reflect.TypeOf((*MockHandler)(nil).Scan))
 }
 
-// Listen mocks base method
-func (m *MockHandler) Listen() error {
+// ListenContainer mocks base method
+func (m *MockHandler) ListenContainer() {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Listen")
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "ListenContainer")
 }
 
-// Listen indicates an expected call of Listen
-func (mr *MockHandlerMockRecorder) Listen() *gomock.Call {
+// ListenContainer indicates an expected call of ListenContainer
+func (mr *MockHandlerMockRecorder) ListenContainer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Listen", reflect.TypeOf((*MockHandler)(nil).Listen))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListenContainer", reflect.TypeOf((*MockHandler)(nil).ListenContainer))
+}
+
+// ListenService mocks base method
+func (m *MockHandler) ListenService() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ListenService")
+}
+
+// ListenService indicates an expected call of ListenService
+func (mr *MockHandlerMockRecorder) ListenService() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListenService", reflect.TypeOf((*MockHandler)(nil).ListenService))
 }

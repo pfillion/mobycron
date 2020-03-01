@@ -58,7 +58,7 @@ function remove_container_job_from_cron() {
 
 @test "swarm scan - start container only from active service task" {
 	# Arrange
-    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='* * * * * 1' --container-label=mobycron.action='start' busybox echo 'job1'
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --container-label=mobycron.schedule='*/2 * * * * *' --container-label=mobycron.action='start' busybox echo 'job1'
     retry 10 1 service_is_ready ${DOER1_SERVICE} "job1" "shutdown" 1
 
     docker service update -d --container-label-add=mobycron.schedule='* * * * * *' --args "echo 'job2'" ${DOER1_SERVICE}
@@ -71,9 +71,9 @@ function remove_container_job_from_cron() {
 	retry 10 1 container_action_completed_successfully ${SERVICE_NAME} 4
     
     run docker service logs ${SERVICE_NAME}
-    assert_output --regexp 'add container job to cron.*skip replacement, the container job is older'
+    assert_output --regexp 'add container job to cron.*remove container job from cron'
     assert_output --regexp 'container action completed successfully.*\* \* \* \* \* \*'
-    refute_output --regexp 'container action completed successfully.*\* \* \* \* \* 1'
+    refute_output --regexp 'container action completed successfully.*\*\/2 \* \* \* \* \*'
 }
 
 @test "swarm listen - add service" {
@@ -103,7 +103,7 @@ function remove_container_job_from_cron() {
     retry 10 1 container_action_completed_successfully ${SERVICE_NAME} 4
     
     run docker service logs ${SERVICE_NAME}
-    assert_output --regexp 'add container job to cron.*replace container job in cron'
+    assert_output --regexp 'add container job to cron.*remove container job from cron'
 }
 
 @test "swarm listen - remove service" {

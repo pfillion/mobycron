@@ -147,7 +147,8 @@ func TestStartApp(t *testing.T) {
 			args:   []string{"mobycron", "--docker-mode"},
 			mock: func(c *MockCronner, h *MockHandler) {
 				h.EXPECT().Scan()
-				h.EXPECT().Listen()
+				h.EXPECT().ListenContainer()
+				h.EXPECT().ListenService()
 				c.EXPECT().Start()
 				c.EXPECT().Stop()
 			},
@@ -203,17 +204,6 @@ func TestStartApp(t *testing.T) {
 			},
 			checks: check(
 				hasError("scan error"),
-			),
-		},
-		{
-			name: "Listen in error",
-			args: []string{"mobycron"},
-			mock: func(c *MockCronner, h *MockHandler) {
-				h.EXPECT().Scan()
-				h.EXPECT().Listen().Return(errors.New("listen error"))
-			},
-			checks: check(
-				hasError("listen error"),
 			),
 		},
 	}
