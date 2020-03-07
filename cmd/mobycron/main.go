@@ -101,8 +101,6 @@ func startApp(ctx *cli.Context) error {
 	<-osChan
 
 	cronner.Stop()
-	// TODO: README.md for new swarm mode
-	// TODO: Cleanup prune method if swarn mode is OK
 	// TODO: Refactoring of all log. Check if useful and complete. Think if it possible to have class for manage logging OR methods to make all fields correctly
 	// TODO: Refactoring of all test for check log with Fields like handler_test working with output but with field and value
 	// TODO: Refactoring of all log Fields to manage sub object ex: event.ID event.Actor.ID. It will be ready for kibana and elasticsearch

@@ -394,22 +394,6 @@ func (mr *MockDockerClientMockRecorder) Events(ctx, options interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockDockerClient)(nil).Events), ctx, options)
 }
 
-// ServiceInspectWithRaw mocks base method
-func (m *MockDockerClient) ServiceInspectWithRaw(ctx context.Context, serviceID string, options types.ServiceInspectOptions) (swarm.Service, []byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceInspectWithRaw", ctx, serviceID, options)
-	ret0, _ := ret[0].(swarm.Service)
-	ret1, _ := ret[1].([]byte)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// ServiceInspectWithRaw indicates an expected call of ServiceInspectWithRaw
-func (mr *MockDockerClientMockRecorder) ServiceInspectWithRaw(ctx, serviceID, options interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceInspectWithRaw", reflect.TypeOf((*MockDockerClient)(nil).ServiceInspectWithRaw), ctx, serviceID, options)
-}
-
 // ServiceList mocks base method
 func (m *MockDockerClient) ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error) {
 	m.ctrl.T.Helper()
@@ -438,19 +422,4 @@ func (m *MockDockerClient) ServiceUpdate(ctx context.Context, serviceID string, 
 func (mr *MockDockerClientMockRecorder) ServiceUpdate(ctx, serviceID, version, service, options interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceUpdate", reflect.TypeOf((*MockDockerClient)(nil).ServiceUpdate), ctx, serviceID, version, service, options)
-}
-
-// TaskList mocks base method
-func (m *MockDockerClient) TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TaskList", ctx, options)
-	ret0, _ := ret[0].([]swarm.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TaskList indicates an expected call of TaskList
-func (mr *MockDockerClientMockRecorder) TaskList(ctx, options interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskList", reflect.TypeOf((*MockDockerClient)(nil).TaskList), ctx, options)
 }

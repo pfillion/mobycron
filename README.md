@@ -32,13 +32,13 @@ You can use the [mobycron library](https://github.com/pfillion/mobycron) directl
 
 Cron job support any environnement variables specified by docker and replace it by the real value before executing the command.
 
-```MOBYCRON_DOCKER_MODE``` is true by defult. When ```mobycron``` is up and running in this mode, it watches Docker socket and try to find any containers with label ```mobycron.schedule``` and add them to the crontab based on the schedule. Go to [docker mode](#docker-mode) section for more detail with this mode.
+```MOBYCRON_DOCKER_MODE``` definde how ```mobycron``` will interact with Docker. The value possible is ```none``` (default), ```container``` or ```swarm```. When mobycron is up and running in ```container``` or ```swarm``` mode, it watches Docker socket and try to find any containers with label ```mobycron.schedule``` and add them to the crontab based on the schedule. Go to [docker mode](#docker-mode) section for more detail with this mode.
 
 ```MOBYCRON_PARSE_SECOND``` is false by default. When activate, schedule accept an optional seconds field at the beginning of the cron spec. This is non-standard and has led to a lot of confusion. The new default parser conforms to the standard as described by the [Cron wikipedia page.](https://en.wikipedia.org/wiki/Cron)
 
 ```MOBYCRON_CONFIG_FILE``` is file path to schedule all job like a crontab file. Go to [configuration file](#configuration-file) section for more detail with this mode.
 
-```CRON_TZ``` is now the recommended way to to configure local time zone of the container. The legacy ```TZ``` prefix will continue to be supported since it is unambiguous and easy to do so.
+```TZ``` configure local time zone of the container.
 
 ## Arguments for the executing container
 
@@ -58,16 +58,25 @@ Once ```mobycron``` is up and running in this mode, it watches Docker socket eve
 
 Cron scheduling rules and format is describe as follow: [CRON Expression Format](https://godoc.org/github.com/robfig/cron#hdr-CRON_Expression_Format)
 
-Others labels can be applied.
+```CRON_TZ``` is now the recommended way to specify the timezone of a single schedule, which is sanctioned by the specification. The legacy ```TZ``` prefix will continue to be supported since it is unambiguous and easy to do so.
+
+The ```container``` mode is the classic Docker mode. Labels can be applied are:
 
 * ```mobycron.action``` is requied and indicate wich action must be performed on the container. Possible choices are ```start```, ```restart```, ```stop``` or ```exec```.
 * ```mobycron.command``` specifie the commande line to execute and is requied when the action is ```exec```.
 * ```mobycron.timeout``` override the default 10 second timeout to do the action.
 
+The second mode is ```swarm``` mode. Docker need to be in a swarm node. Label can be applied is:
+
+* ```mobycron.action``` is required and indicate which action must be performed on the container. Possible choices are only ```update``` due to the mechanic of services in Docker Swarm.
+
 ### Examples
 
 ```sh
-# Start the container every minute
+# Start mobycron in container mode
+> docker run -d -e MOBYCRON_DOCKER_MODE=container -v /var/run/docker.sock:/var/run/docker.sock pfillion/mobycron:latest
+
+# Start the job container and print date every minute
 > docker run -d --label=mobycron.schedule="0/1 * * * *" --label=mobycron.action="start" busybox date
 ```
 
@@ -95,7 +104,7 @@ You can mount directly a file or use docker configuration to schedule all job li
             "-S",
             "-X",
             "GET",
-            "http://example.com"
+            "https://example.com"
         ]
     },
     {
@@ -108,10 +117,9 @@ You can mount directly a file or use docker configuration to schedule all job li
             "/configs/passwd",
             "forget",
             "--keep-daily",
-            "7",
-            "--prune"
+            "7"
         ]
-    },
+    }
 ]
 ```
 
@@ -131,29 +139,34 @@ As an alternative to passing sensitive information via environment variables, `_
 See the docker swarm [examples](https://github.com/pfillion/mobycron/tree/master/examples) in the source code or below.
 
 ```yml
-version: '3.6'
+version: '3.7'
 services:
   cron:
     image: pfillion/mobycron:latest
     environment:
-      MOBYCRON_DOCKER_MODE: 'true'
+      MOBYCRON_DOCKER_MODE: 'swarm'
       MOBYCRON_PARSE_SECOND: 'true'
-      CRON_TZ: America/New_York
+      TZ: America/New_York
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     deploy:
-      mode: global
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 30s
+      replicas: 1
 
   busybox:
     image: busybox:latest
     command: echo 'Hello World!!'
-    labels: 
-      mobycron.schedule: "*/30 * * * * *"
-      mobycron.action: "start"
     deploy:
-      replicas: 6
       restart_policy:
         condition: none
+      replicas: 6
+      labels:
+        mobycron.schedule: "*/30 * * * * *"
+        mobycron.action: "update"
 ```
 
 ## Authors

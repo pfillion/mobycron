@@ -516,57 +516,10 @@ func TestAddServiceJob(t *testing.T) {
 			),
 		},
 		{
-			name: "job with empty timeout",
-			job1: ServiceJob{Schedule: "3 * * * *", Action: "update", Timeout: ""},
-			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob("3 * * * *", &ServiceJob{Schedule: "3 * * * *", Action: "update", cron: c})
-			},
-			checks: check(
-				hasNilError(),
-				hasEntries("", 0),
-				hasLogField("msg", "add service job to cron"),
-			),
-		},
-		{
-			name: "invalid timeout",
-			job1: ServiceJob{Schedule: "3 * * * *", Action: "update", Timeout: "invalid"},
-			checks: check(
-				hasError("invalid container timeout, only integer are permitted"),
-				hasNoEntries(),
-			),
-		},
-		{
 			name: "invalid action",
 			job1: ServiceJob{Schedule: "3 * * * *", Action: "invalid"},
 			checks: check(
 				hasError("invalid service action, only 'update' and 'exec' are permitted"),
-				hasNoEntries(),
-			),
-		},
-		{
-			name: "invalid command when action is update",
-			job1: ServiceJob{Schedule: "* * * * *", Action: "update", Command: "ls"},
-			checks: check(
-				hasError("a command can be specified only with 'exec' action"),
-				hasNoEntries(),
-			),
-		},
-		{
-			name: "valid command when action is exec",
-			job1: ServiceJob{Schedule: "* * * * *", Action: "exec", Command: "ls"},
-			mock: func(r *MockRunner, c *Cron) {
-				r.EXPECT().AddJob(gomock.Any(), gomock.Any())
-			},
-			checks: check(
-				hasNilError(),
-				hasEntries("", 0),
-			),
-		},
-		{
-			name: "command required when action is exec",
-			job1: ServiceJob{Schedule: "* * * * *", Action: "exec", Command: ""},
-			checks: check(
-				hasError("command is required"),
 				hasNoEntries(),
 			),
 		},

@@ -132,8 +132,6 @@ func (c *Cron) AddServiceJob(job ServiceJob) error {
 		"func":              "Cron.AddServiceJob",
 		"schedule":          job.Schedule,
 		"action":            job.Action,
-		"timeout":           job.Timeout,
-		"command":           job.Command,
 		"service.ID":        job.ServiceID,
 		"service.Name":      job.ServiceName,
 		"service.Version":   job.ServiceVersion,
@@ -144,22 +142,7 @@ func (c *Cron) AddServiceJob(job ServiceJob) error {
 		return errors.New("schedule is required")
 	}
 
-	if job.Timeout != "" {
-		if _, err := strconv.ParseInt(job.Timeout, 10, 0); err != nil {
-			return errors.New("invalid container timeout, only integer are permitted")
-		}
-	}
-
-	switch job.Action {
-	case "update":
-		if job.Command != "" {
-			return errors.New("a command can be specified only with 'exec' action")
-		}
-	case "exec":
-		if job.Command == "" {
-			return errors.New("command is required")
-		}
-	default:
+	if job.Action != "update" {
 		return errors.New("invalid service action, only 'update' and 'exec' are permitted")
 	}
 

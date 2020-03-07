@@ -59,8 +59,6 @@ func TestServiceJobRun(t *testing.T) {
 				hasLogField("level", "info"),
 				hasLogField("func", "ServiceJob.Run"),
 				hasLogField("schedule", "1 * * * 5"),
-				hasLogField("action", "update"),
-				hasLogField("timeout", "30"),
 				hasLogField("service.ID", "ID1"),
 				hasLogField("service.Name", "s1"),
 				hasLogField("msg", "service action completed successfully"),
@@ -128,8 +126,6 @@ func TestServiceJobRun(t *testing.T) {
 			j := &ServiceJob{
 				Schedule:       tt.schedule,
 				Action:         tt.action,
-				Timeout:        tt.timeout,
-				Command:        tt.command,
 				ServiceID:      tt.serviceID,
 				ServiceName:    tt.serviceName,
 				ServiceVersion: tt.serviceVersion,

@@ -13,8 +13,6 @@ import (
 type ServiceJob struct {
 	Schedule         string
 	Action           string
-	Timeout          string
-	Command          string
 	ServiceID        string
 	ServiceName      string
 	ServiceVersion   swarm.Version
@@ -30,8 +28,6 @@ func (j *ServiceJob) Run() {
 		"func":         "ServiceJob.Run",
 		"schedule":     j.Schedule,
 		"action":       j.Action,
-		"timeout":      j.Timeout,
-		"command":      j.Command,
 		"service.ID":   j.ServiceID,
 		"service.Name": j.ServiceName,
 	})

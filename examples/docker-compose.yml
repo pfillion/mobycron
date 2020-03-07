@@ -1,11 +1,11 @@
-version: '3.6'
+version: '3.7'
 services:
   cron:
     image: pfillion/mobycron:latest
     environment:
       MOBYCRON_DOCKER_MODE: 'swarm'
       MOBYCRON_PARSE_SECOND: 'true'
-      CRON_TZ: America/New_York
+      TZ: America/New_York
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     deploy:
@@ -19,10 +19,10 @@ services:
   busybox:
     image: busybox:latest
     command: echo 'Hello World!!'
-    labels: 
-      mobycron.schedule: "*/30 * * * * *"
-      mobycron.action: "start"
     deploy:
-      replicas: 6
       restart_policy:
         condition: none
+      replicas: 6
+      labels:
+        mobycron.schedule: "*/30 * * * * *"
+        mobycron.action: "update"

@@ -4,7 +4,7 @@
         "command": "bash",
         "args": [
             "-c",
-            "echo Hello $NAME"            
+            "echo Hello $NAME"
         ]
     },
     {
@@ -15,7 +15,7 @@
             "-S",
             "-X",
             "GET",
-            "https://example.com"            
+            "https://example.com"
         ]
     },
     {
