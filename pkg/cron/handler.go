@@ -126,6 +126,7 @@ func (h *Handler) ListenContainer() {
 // ListenService listen docker message for services with cron schedule
 func (h *Handler) ListenService() {
 	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", "mobycron.schedule")
 	filterArgs.Add("type", "service")
 	filterArgs.Add("event", "create")
 	filterArgs.Add("event", "remove")

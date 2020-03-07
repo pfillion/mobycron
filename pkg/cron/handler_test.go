@@ -381,6 +381,7 @@ func TestListenService(t *testing.T) {
 			name: "service create - add service",
 			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
 				eventOpt := types.EventsOptions{Filters: filters.NewArgs()}
+				eventOpt.Filters.Add("label", "mobycron.schedule")
 				eventOpt.Filters.Add("type", "service")
 				eventOpt.Filters.Add("event", "create")
 				eventOpt.Filters.Add("event", "remove")
