@@ -107,7 +107,6 @@ func startApp(ctx *cli.Context) error {
 	// TODO: Migrate to urfave/cli/v2
 	// TODO: Refactoring all tests for verify all fields logged in the main test case
 	// TODO: change label action to be 'start' by default
-	// TODO: evaluate if we need to manage 'Exec' action when the container stop or die
 
 	return nil
 }

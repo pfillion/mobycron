@@ -17,17 +17,9 @@ LABEL \
 
 RUN apk add --update --no-cache \
     ca-certificates \
-    fuse \
-    openssh-client \
     curl \
     bash \
-    tzdata \
-    restic
-
-# fuse TODO: Check if dependencies for restic, useless
-# openssh-client TODO: Check if dependencies for restic, useless
-# restic TODO: With docker crontab, useless. Change example docker-compose to adapt with restic container job
-# tzdata TODO: with v3, check if it necessary with new ENV integrated in cron dirrectly
+    tzdata
 
 COPY bin /usr/bin
 

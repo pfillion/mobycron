@@ -33,16 +33,6 @@ fileExistenceTests:
   shouldExist: true
 
 commandTests:
-  - name: "fuse is functional"
-    command: "fusermount"
-    args: ["-V"]
-    expectedOutput: ["fusermount version: .*"]
-    exitCode: 0
-  - name: "openssh is functional"
-    command: "ssh"
-    args: ["-V"]
-    expectedError: ["OpenSSH.*"]
-    exitCode: 0
   - name: "curl is functional"
     command: "curl"
     args: ["--version"]
@@ -52,9 +42,4 @@ commandTests:
     command: "bash"
     args: ["--version"]
     expectedOutput: ["GNU bash, version .*"]
-    exitCode: 0
-  - name: "restic is functional"
-    command: "restic"
-    args: ["version"]
-    expectedOutput: ["restic .*"]
     exitCode: 0

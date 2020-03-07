@@ -41,12 +41,12 @@ func NewCron(parseSecond bool) *Cron {
 
 // AddJob adds a Job to the Cron to be run on the given schedule.
 func (c *Cron) AddJob(job Job) error {
-	log.WithFields(log.Fields{
+	log := log.WithFields(log.Fields{
 		"func":     "Cron.AddJob",
 		"schedule": job.Schedule,
 		"command":  job.Command,
 		"args":     strings.Join(job.Args, " "),
-	}).Infoln("add job to cron")
+	})
 
 	if job.Schedule == "" {
 		return errors.New("schedule is required")
@@ -61,6 +61,8 @@ func (c *Cron) AddJob(job Job) error {
 	if _, err := c.runner.AddJob(job.Schedule, &job); err != nil {
 		return errors.Wrap(err, "failed to add job in cron")
 	}
+
+	log.Infoln("add job to cron")
 
 	return nil
 }

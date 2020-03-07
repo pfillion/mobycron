@@ -17,18 +17,5 @@
             "GET",
             "https://example.com"
         ]
-    },
-    {
-        "schedule": "0 3 * * *",
-        "command": "/usr/bin/restic",
-        "args": [
-            "-r",
-            "$REPO__FILE",
-            "-p",
-            "/configs/passwd",
-            "forget",
-            "--keep-daily",
-            "7"
-        ]
     }
 ]
