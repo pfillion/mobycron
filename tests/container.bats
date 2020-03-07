@@ -35,8 +35,7 @@ function exit_fatal() {
 
 @test "container scan - config file only with multiple jobs" {
     # Act
-    # Prevent Bug: Only last job is executed. It is due to use of range and invalid use of pointer in Cron.AddJobs
-    docker run -d -e MOBYCRON_DOCKER_MODE=false -e MOBYCRON_PARSE_SECOND=true -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=none -e MOBYCRON_PARSE_SECOND=true -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 job_completed_successfully ${CONTAINER_NAME} 3
@@ -47,7 +46,7 @@ function exit_fatal() {
 
 @test "container scan - parse second not permitted" {
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=false -e MOBYCRON_PARSE_SECOND=false -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=none -e MOBYCRON_PARSE_SECOND=false -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 exit_fatal ${CONTAINER_NAME} 1
@@ -60,7 +59,7 @@ function exit_fatal() {
     docker create --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
     
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
@@ -73,7 +72,7 @@ function exit_fatal() {
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='restart' busybox echo 'Do job'
 
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
@@ -86,7 +85,7 @@ function exit_fatal() {
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.timeout='1' -l mobycron.action='stop' busybox sh -c ' sleep 100 && echo ''Do job'''
     
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
@@ -99,7 +98,7 @@ function exit_fatal() {
     docker run -d --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job''' busybox sleep 100
    
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
@@ -113,7 +112,7 @@ function exit_fatal() {
     docker run -d --name ${DOER2_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='exec' -l mobycron.command='echo ''Do job2''' busybox sleep 100
     
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 2
@@ -124,7 +123,7 @@ function exit_fatal() {
 
 @test "container listen - server create container" {
     # Arrange
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
     
     # Act
     docker create --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
@@ -137,7 +136,7 @@ function exit_fatal() {
 
 @test "container listen - server run container" {
     # Arrange
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
     
     # Act
     docker run --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
@@ -150,7 +149,7 @@ function exit_fatal() {
 
 @test "container listen - server remove container" {
     # Arrange
-    docker run -d -e MOBYCRON_DOCKER_MODE=true -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
     docker run --name ${DOER1_CONTAINER_NAME} -l mobycron.schedule='* * * * * *' -l mobycron.action='start' busybox echo 'Do job'
     retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
 

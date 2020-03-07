@@ -96,18 +96,32 @@ func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 	return m.recorder
 }
 
-// Scan mocks base method
-func (m *MockHandler) Scan() error {
+// ScanContainer mocks base method
+func (m *MockHandler) ScanContainer() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Scan")
+	ret := m.ctrl.Call(m, "ScanContainer")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Scan indicates an expected call of Scan
-func (mr *MockHandlerMockRecorder) Scan() *gomock.Call {
+// ScanContainer indicates an expected call of ScanContainer
+func (mr *MockHandlerMockRecorder) ScanContainer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scan", reflect.TypeOf((*MockHandler)(nil).Scan))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanContainer", reflect.TypeOf((*MockHandler)(nil).ScanContainer))
+}
+
+// ScanService mocks base method
+func (m *MockHandler) ScanService() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanService")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ScanService indicates an expected call of ScanService
+func (mr *MockHandlerMockRecorder) ScanService() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanService", reflect.TypeOf((*MockHandler)(nil).ScanService))
 }
 
 // ListenContainer mocks base method

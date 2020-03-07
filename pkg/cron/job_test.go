@@ -196,7 +196,7 @@ func TestJobRun(t *testing.T) {
 				tt.mock(s)
 			}
 
-			c := &Cron{nil, s, fs, nil}
+			c := &Cron{nil, s, fs, nil, nil}
 			j := &Job{"3 * * * * *", tt.command, tt.args, c}
 
 			// Act

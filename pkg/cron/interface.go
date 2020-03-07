@@ -28,7 +28,9 @@ type JobSynchroniser interface {
 // Cronner is an interface for adding job to cron
 type Cronner interface {
 	AddContainerJob(job ContainerJob) error
+	AddServiceJob(job ServiceJob) error
 	RemoveContainerJob(ID string)
+	RemoveServiceJob(ID string)
 }
 
 // DockerClient is the client for docker
@@ -45,5 +47,6 @@ type DockerClient interface {
 	Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
 	ServiceInspectWithRaw(ctx context.Context, serviceID string, options types.ServiceInspectOptions) (swarm.Service, []byte, error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
+	ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (types.ServiceUpdateResponse, error)
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 }

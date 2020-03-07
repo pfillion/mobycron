@@ -389,7 +389,7 @@ func TestContainerJobRun(t *testing.T) {
 				tt.mock(s, cli)
 			}
 
-			c := &Cron{nil, s, nil, nil}
+			c := &Cron{nil, s, nil, nil, nil}
 			j := &ContainerJob{
 				Schedule:  tt.schedule,
 				Action:    tt.action,

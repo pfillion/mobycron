@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	cron "github.com/robfig/cron/v3"
@@ -17,17 +16,11 @@ import (
 // Cron keeps track of any number of jobs, invoking the associated Job as
 // specified by the schedule. It may be started and stopped.
 type Cron struct {
-	runner     Runner
-	sync       JobSynchroniser
-	fs         afero.Fs
-	jobEntries map[string]cronEntry
-}
-
-type cronEntry struct {
-	ID        cron.EntryID
-	serviceID string
-	slot      int
-	created   int64
+	runner   Runner
+	sync     JobSynchroniser
+	fs       afero.Fs
+	cEntries map[string]cron.EntryID
+	sEntries map[string]cron.EntryID
 }
 
 // NewCron return a new Cron job runner.
@@ -41,7 +34,8 @@ func NewCron(parseSecond bool) *Cron {
 		cron.New(cron.WithParser(cron.NewParser(option))),
 		&sync.WaitGroup{},
 		afero.NewOsFs(),
-		make(map[string]cronEntry),
+		make(map[string]cron.EntryID),
+		make(map[string]cron.EntryID),
 	}
 }
 
@@ -92,12 +86,6 @@ func (c *Cron) AddContainerJob(job ContainerJob) error {
 		"action":          job.Action,
 		"timeout":         job.Timeout,
 		"command":         job.Command,
-		"service.ID":      job.ServiceID,
-		"service.Name":    job.ServiceName,
-		"task.ID":         job.TaskID,
-		"task.Name":       job.TaskName,
-		"slot":            job.Slot,
-		"created":         time.Unix(job.Created, 0).String(),
 		"container.ID":    job.Container.ID,
 		"container.Names": job.Container.Names,
 	})
@@ -133,22 +121,86 @@ func (c *Cron) AddContainerJob(job ContainerJob) error {
 		return errors.Wrap(err, "failed to add container job in cron")
 	}
 
-	c.jobEntries[job.Container.ID] = cronEntry{ID, job.ServiceID, job.Slot, job.Created}
+	c.cEntries[job.Container.ID] = ID
+
+	return nil
+}
+
+// AddServiceJob add service job to the Cron to be run on the given schedule.
+func (c *Cron) AddServiceJob(job ServiceJob) error {
+	log := log.WithFields(log.Fields{
+		"func":              "Cron.AddServiceJob",
+		"schedule":          job.Schedule,
+		"action":            job.Action,
+		"timeout":           job.Timeout,
+		"command":           job.Command,
+		"service.ID":        job.ServiceID,
+		"service.Name":      job.ServiceName,
+		"service.Version":   job.ServiceVersion,
+		"service.CreatedAt": job.ServiceCreatedAt,
+	})
+
+	if job.Schedule == "" {
+		return errors.New("schedule is required")
+	}
+
+	if job.Timeout != "" {
+		if _, err := strconv.ParseInt(job.Timeout, 10, 0); err != nil {
+			return errors.New("invalid container timeout, only integer are permitted")
+		}
+	}
+
+	switch job.Action {
+	case "update":
+		if job.Command != "" {
+			return errors.New("a command can be specified only with 'exec' action")
+		}
+	case "exec":
+		if job.Command == "" {
+			return errors.New("command is required")
+		}
+	default:
+		return errors.New("invalid service action, only 'update' and 'exec' are permitted")
+	}
+
+	log.Infoln("add service job to cron")
+
+	job.cron = c
+	ID, err := c.runner.AddJob(job.Schedule, &job)
+	if err != nil {
+		return errors.Wrap(err, "failed to add service job in cron")
+	}
+
+	c.sEntries[job.ServiceID] = ID
 
 	return nil
 }
 
 // RemoveContainerJob remove container job from Cron.
 func (c *Cron) RemoveContainerJob(ID string) {
-	if entry, ok := c.jobEntries[ID]; ok {
-		delete(c.jobEntries, ID)
-		c.runner.Remove(entry.ID)
+	if entry, ok := c.cEntries[ID]; ok {
+		delete(c.cEntries, ID)
+		c.runner.Remove(entry)
 
 		log := log.WithFields(log.Fields{
 			"func":         "Cron.RemoveContainerJob",
 			"container.ID": ID,
 		})
 		log.Infoln("remove container job from cron")
+	}
+}
+
+// RemoveServiceJob remove service job from Cron.
+func (c *Cron) RemoveServiceJob(ID string) {
+	if entry, ok := c.sEntries[ID]; ok {
+		delete(c.sEntries, ID)
+		c.runner.Remove(entry)
+
+		log := log.WithFields(log.Fields{
+			"func":       "Cron.RemoveServiceJob",
+			"service.ID": ID,
+		})
+		log.Infoln("remove service job from cron")
 	}
 }
 

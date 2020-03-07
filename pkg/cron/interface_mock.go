@@ -187,6 +187,20 @@ func (mr *MockCronnerMockRecorder) AddContainerJob(job interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContainerJob", reflect.TypeOf((*MockCronner)(nil).AddContainerJob), job)
 }
 
+// AddServiceJob mocks base method
+func (m *MockCronner) AddServiceJob(job ServiceJob) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddServiceJob", job)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddServiceJob indicates an expected call of AddServiceJob
+func (mr *MockCronnerMockRecorder) AddServiceJob(job interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceJob", reflect.TypeOf((*MockCronner)(nil).AddServiceJob), job)
+}
+
 // RemoveContainerJob mocks base method
 func (m *MockCronner) RemoveContainerJob(ID string) {
 	m.ctrl.T.Helper()
@@ -197,6 +211,18 @@ func (m *MockCronner) RemoveContainerJob(ID string) {
 func (mr *MockCronnerMockRecorder) RemoveContainerJob(ID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveContainerJob", reflect.TypeOf((*MockCronner)(nil).RemoveContainerJob), ID)
+}
+
+// RemoveServiceJob mocks base method
+func (m *MockCronner) RemoveServiceJob(ID string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RemoveServiceJob", ID)
+}
+
+// RemoveServiceJob indicates an expected call of RemoveServiceJob
+func (mr *MockCronnerMockRecorder) RemoveServiceJob(ID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceJob", reflect.TypeOf((*MockCronner)(nil).RemoveServiceJob), ID)
 }
 
 // MockDockerClient is a mock of DockerClient interface
@@ -397,6 +423,21 @@ func (m *MockDockerClient) ServiceList(ctx context.Context, options types.Servic
 func (mr *MockDockerClientMockRecorder) ServiceList(ctx, options interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceList", reflect.TypeOf((*MockDockerClient)(nil).ServiceList), ctx, options)
+}
+
+// ServiceUpdate mocks base method
+func (m *MockDockerClient) ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (types.ServiceUpdateResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceUpdate", ctx, serviceID, version, service, options)
+	ret0, _ := ret[0].(types.ServiceUpdateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceUpdate indicates an expected call of ServiceUpdate
+func (mr *MockDockerClientMockRecorder) ServiceUpdate(ctx, serviceID, version, service, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceUpdate", reflect.TypeOf((*MockDockerClient)(nil).ServiceUpdate), ctx, serviceID, version, service, options)
 }
 
 // TaskList mocks base method

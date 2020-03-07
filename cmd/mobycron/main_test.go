@@ -14,10 +14,29 @@ import (
 	is "gotest.tools/v3/assert/cmp"
 )
 
-func TestInitApp(t *testing.T) {
+func TestInitAppModeSwarm(t *testing.T) {
 	cmdRoot.Before = initApp
 	cmdRoot.Action = func(ctx *cli.Context) error { return nil }
-	args := []string{"mobycron"}
+	args := []string{"mobycron", "--docker-mode=swarm"}
+
+	// Act
+	err := cmdRoot.Run(args)
+
+	// Assert
+	assert.NilError(t, err)
+	assert.Assert(t, cronner != nil)
+	assert.Assert(t, osChan != nil)
+	assert.Assert(t, handler != nil)
+	assert.Assert(t, log.StandardLogger().Out == os.Stdout)
+	assert.Assert(t, log.GetLevel() == log.InfoLevel)
+	_, ok := log.StandardLogger().Formatter.(*log.JSONFormatter)
+	assert.Assert(t, ok)
+}
+
+func TestInitAppModeContainer(t *testing.T) {
+	cmdRoot.Before = initApp
+	cmdRoot.Action = func(ctx *cli.Context) error { return nil }
+	args := []string{"mobycron", "--docker-mode=container"}
 
 	// Act
 	err := cmdRoot.Run(args)
@@ -36,7 +55,7 @@ func TestInitApp(t *testing.T) {
 func TestInitAppHandlerError(t *testing.T) {
 	cmdRoot.Before = initApp
 	cmdRoot.Action = func(ctx *cli.Context) error { return nil }
-	args := []string{"mobycron"}
+	args := []string{"mobycron", "--docker-mode=swarm"}
 
 	os.Setenv("DOCKER_HOST", "bad docker host")
 	defer os.Unsetenv("DOCKER_HOST")
@@ -48,10 +67,10 @@ func TestInitAppHandlerError(t *testing.T) {
 	assert.ErrorContains(t, err, "unable to parse docker host")
 }
 
-func TestInitHandlerNil(t *testing.T) {
+func TestInitAppModeNone(t *testing.T) {
 	cmdRoot.Before = initApp
 	cmdRoot.Action = func(ctx *cli.Context) error { return nil }
-	args := []string{"mobycron", "--docker-mode=false"}
+	args := []string{"mobycron", "--docker-mode=none"}
 
 	// Act
 	err := cmdRoot.Run(args)
@@ -59,6 +78,18 @@ func TestInitHandlerNil(t *testing.T) {
 	// Assert
 	assert.NilError(t, err)
 	assert.Assert(t, is.Nil(handler))
+}
+
+func TestInitAppModeInvalid(t *testing.T) {
+	cmdRoot.Before = initApp
+	cmdRoot.Action = func(ctx *cli.Context) error { return nil }
+	args := []string{"mobycron", "--docker-mode=sdfsdf"}
+
+	// Act
+	err := cmdRoot.Run(args)
+
+	// Assert
+	assert.Error(t, err, "docker-mode flag is invalid")
 }
 
 func TestMain(t *testing.T) {
@@ -141,13 +172,12 @@ func TestStartApp(t *testing.T) {
 		checks []checkFunc
 	}{
 		{
-			name:   "run docker mode",
+			name:   "run docker mode - swarm",
 			osChan: make(chan os.Signal),
 			sing:   syscall.SIGINT,
-			args:   []string{"mobycron", "--docker-mode"},
+			args:   []string{"mobycron", "--docker-mode=swarm"},
 			mock: func(c *MockCronner, h *MockHandler) {
-				h.EXPECT().Scan()
-				h.EXPECT().ListenContainer()
+				h.EXPECT().ScanService()
 				h.EXPECT().ListenService()
 				c.EXPECT().Start()
 				c.EXPECT().Stop()
@@ -158,10 +188,26 @@ func TestStartApp(t *testing.T) {
 			),
 		},
 		{
-			name:   "run docker mode false",
+			name:   "run docker mode - container",
 			osChan: make(chan os.Signal),
 			sing:   syscall.SIGINT,
-			args:   []string{"mobycron", "--docker-mode=false"},
+			args:   []string{"mobycron", "--docker-mode=container"},
+			mock: func(c *MockCronner, h *MockHandler) {
+				h.EXPECT().ScanContainer()
+				h.EXPECT().ListenContainer()
+				c.EXPECT().Start()
+				c.EXPECT().Stop()
+			},
+			checks: check(
+				hasNilError(),
+				hasOutput("cron is running and waiting signal for stop"),
+			),
+		},
+		{
+			name:   "run docker mode - none",
+			osChan: make(chan os.Signal),
+			sing:   syscall.SIGINT,
+			args:   []string{"mobycron", "--docker-mode=none"},
 			mock: func(c *MockCronner, h *MockHandler) {
 				c.EXPECT().Start()
 				c.EXPECT().Stop()
@@ -175,7 +221,7 @@ func TestStartApp(t *testing.T) {
 			name:   "run config file",
 			osChan: make(chan os.Signal),
 			sing:   syscall.SIGINT,
-			args:   []string{"mobycron", "--docker-mode=false", "--config-file=/etc/mobycron/config.json"},
+			args:   []string{"mobycron", "--docker-mode=none", "--config-file=/etc/mobycron/config.json"},
 			mock: func(c *MockCronner, h *MockHandler) {
 				c.EXPECT().LoadConfig("/etc/mobycron/config.json").Return(nil)
 				c.EXPECT().Start()
@@ -188,7 +234,7 @@ func TestStartApp(t *testing.T) {
 		},
 		{
 			name: "run config file in error",
-			args: []string{"mobycron", "--docker-mode=false", "--config-file=/etc/mobycron/config.json"},
+			args: []string{"mobycron", "--docker-mode=none", "--config-file=/etc/mobycron/config.json"},
 			mock: func(c *MockCronner, h *MockHandler) {
 				c.EXPECT().LoadConfig(gomock.Any()).Return(errors.New("config error"))
 			},
@@ -197,10 +243,20 @@ func TestStartApp(t *testing.T) {
 			),
 		},
 		{
-			name: "Scan in error",
-			args: []string{"mobycron"},
+			name: "ScanContainer in error",
+			args: []string{"mobycron", "--docker-mode=container"},
 			mock: func(c *MockCronner, h *MockHandler) {
-				h.EXPECT().Scan().Return(errors.New("scan error"))
+				h.EXPECT().ScanContainer().Return(errors.New("scan error"))
+			},
+			checks: check(
+				hasError("scan error"),
+			),
+		},
+		{
+			name: "ScanService in error",
+			args: []string{"mobycron", "--docker-mode=swarm"},
+			mock: func(c *MockCronner, h *MockHandler) {
+				h.EXPECT().ScanService().Return(errors.New("scan error"))
 			},
 			checks: check(
 				hasError("scan error"),

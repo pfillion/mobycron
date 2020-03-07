@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/pfillion/mobycron/pkg/cron"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -21,7 +22,8 @@ type Cronner interface {
 
 // Handler scan and listen docker messages of containers labeled for crontab
 type Handler interface {
-	Scan() error
+	ScanContainer() error
+	ScanService() error
 	ListenContainer()
 	ListenService()
 }
@@ -36,20 +38,24 @@ var (
 
 type config struct {
 	cfgFile     string
-	dockerMode  bool
+	dockerMode  string
 	parseSecond bool
 }
 
 func initApp(ctx *cli.Context) error {
 	c := cron.NewCron(cfg.parseSecond)
-	if cfg.dockerMode {
+
+	switch cfg.dockerMode {
+	case "container", "swarm":
 		h, err := cron.NewHandler(c)
 		if err != nil {
 			return err
 		}
 		handler = h
-	} else {
+	case "none":
 		handler = nil
+	default:
+		return errors.New("docker-mode flag is invalid")
 	}
 
 	cronner = c
@@ -70,12 +76,17 @@ func startApp(ctx *cli.Context) error {
 		}
 	}
 
-	if cfg.dockerMode {
-		if err := handler.Scan(); err != nil {
+	if cfg.dockerMode == "container" {
+		if err := handler.ScanContainer(); err != nil {
 			return err
 		}
-
 		handler.ListenContainer()
+	}
+
+	if cfg.dockerMode == "swarm" {
+		if err := handler.ScanService(); err != nil {
+			return err
+		}
 		handler.ListenService()
 	}
 
@@ -90,6 +101,8 @@ func startApp(ctx *cli.Context) error {
 	<-osChan
 
 	cronner.Stop()
+	// TODO: README.md for new swarm mode
+	// TODO: Cleanup prune method if swarn mode is OK
 	// TODO: Refactoring of all log. Check if useful and complete. Think if it possible to have class for manage logging OR methods to make all fields correctly
 	// TODO: Refactoring of all test for check log with Fields like handler_test working with output but with field and value
 	// TODO: Refactoring of all log Fields to manage sub object ex: event.ID event.Actor.ID. It will be ready for kibana and elasticsearch
@@ -115,11 +128,12 @@ func init() {
 
 	// Global options
 	cmdRoot.Flags = []cli.Flag{
-		cli.BoolTFlag{
-			Name:        "docker-mode, d",
+		cli.StringFlag{
+			Name:        "docker-mode, m",
 			EnvVar:      "MOBYCRON_DOCKER_MODE",
 			Destination: &cfg.dockerMode,
-			Usage:       "activate docker mode (default: true)",
+			Value:       "none",
+			Usage:       "activate docker mode (swarm, container, none)",
 		},
 		cli.BoolFlag{
 			Name:        "parse-second, s",

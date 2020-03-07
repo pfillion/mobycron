@@ -62,6 +62,9 @@ go-clean: ## Clean go app
 go-run: ## Run go app
 	$(BIN_FOLDER)/$(APP_NAME)
 
+go-mod-clean: ## Run go module cleanup
+	go mod tidy -v
+
 docker-build: ## Build the image form Dockerfile
 	docker build \
 		--build-arg BUILD_DATE=$(BUILD_DATE) \
