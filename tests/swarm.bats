@@ -29,55 +29,65 @@ function remove_service_job_from_cron() {
 	[ $(docker service logs $1 | grep -c 'remove service job from cron') -ge $2 ]
 }
 
+function job_completed_successfully() {
+	[ $(docker service logs $1 | grep -c $2) -ge $3 ]
+}
+
+function cron_is_running_and_waiting() {
+	[ $(docker service logs $1 | grep -c 'cron is running and waiting signal for stop') -ge $2 ]
+}
+
 @test "swarm scan - update all replicas from service" {
     # Arrange
-    docker service create --name ${DOER1_SERVICE} --replicas=2 --restart-condition=none --label=mobycron.schedule='* * * * * *' --label=mobycron.action='update' busybox sh -c 'echo ''job1'' && sleep 6'
+    docker service create -d --name ${DOER1_SERVICE} --replicas=2 --restart-condition=none --label=mobycron.schedule='*/1 * * * * *' --label=mobycron.action='update' busybox echo 'job1'
 
 	# Act
-    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+    docker service create -d --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
 
 	# Assert
-	retry 10 1 service_action_completed_successfully ${SERVICE_NAME} 4
-    run docker service logs ${DOER1_SERVICE}
-    assert_output --regexp ${DOER1_SERVICE}'\.1.*job1'
-    assert_output --regexp ${DOER1_SERVICE}'\.2.*job1'
+	retry 5 1 service_action_completed_successfully ${SERVICE_NAME} 1
+    retry 5 1 job_completed_successfully ${DOER1_SERVICE} ${DOER1_SERVICE}'\.1.*job1' 2
+    retry 5 1 job_completed_successfully ${DOER1_SERVICE} ${DOER1_SERVICE}'\.2.*job1' 2
 }
 
 @test "swarm listen - add service" {
 	# Arrange
-    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
-	
+    docker service create -d --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+    retry 5 1 cron_is_running_and_waiting ${SERVICE_NAME} 1
+    
     # Act
-    docker service create --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --label=mobycron.schedule='*/10 * * * * *' --label=mobycron.action='update' busybox sh -c 'echo ''job1'' && sleep 6'
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --label=mobycron.schedule='*/1 * * * * *' --label=mobycron.action='update' busybox echo 'job1'
 
 	# Assert
-    retry 15 1 service_action_completed_successfully ${SERVICE_NAME} 2
-    run docker service logs ${DOER1_SERVICE}
-    assert_output --regexp 'job1.*job1'
+    retry 5 1 service_action_completed_successfully ${SERVICE_NAME} 1
+    retry 5 1 job_completed_successfully ${DOER1_SERVICE} ${DOER1_SERVICE}'\.1.*job1' 2
 }
 
 @test "swarm listen - update service" {
 	# Arrange
-    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
-    docker service create --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --label=mobycron.schedule='*/10 * * * * *' --label=mobycron.action='update' busybox sh -c 'echo ''job1'' && sleep 6'
+    docker service create -d --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+    retry 5 1 cron_is_running_and_waiting ${SERVICE_NAME} 1
+
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --label=mobycron.schedule='*/1 * * * * *' --label=mobycron.action='update' busybox echo 'job1'
+    retry 5 1 job_completed_successfully ${DOER1_SERVICE} ${DOER1_SERVICE}'\.1.*job1' 2
 
     # Act
-    docker service update --args "sh -c 'echo ''job2'' && sleep 6'" ${DOER1_SERVICE}
+    docker service update -d --args "echo ''job2''" ${DOER1_SERVICE}
 
 	# Assert
-    retry 10 1 remove_service_job_from_cron ${SERVICE_NAME} 1
-    run docker service logs ${DOER1_SERVICE}
-    assert_output --regexp 'job1.*job2'
+    retry 5 1 job_completed_successfully ${DOER1_SERVICE} ${DOER1_SERVICE}'\.1.*job2' 2
 }
 
 @test "swarm listen - remove service" {
 	# Arrange
-    docker service create --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
-    docker service create --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --label=mobycron.schedule='* */5 * * * *' --label=mobycron.action='update' busybox sleep 6
+    docker service create -d --name ${SERVICE_NAME} -e MOBYCRON_DOCKER_MODE=swarm -e MOBYCRON_PARSE_SECOND=true --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock ${IMAGE_DIGEST}
+    retry 5 1 cron_is_running_and_waiting ${SERVICE_NAME} 1
+
+    docker service create -d --name ${DOER1_SERVICE} --replicas=1 --restart-condition=none --label=mobycron.schedule='* */5 * * * *' --label=mobycron.action='update' busybox sleep 100
     
 	# Act
     docker service rm ${DOER1_SERVICE}
   
 	# Assert
-    retry 10 1 remove_service_job_from_cron ${SERVICE_NAME} 1
+    retry 5 1 remove_service_job_from_cron ${SERVICE_NAME} 1
 }
