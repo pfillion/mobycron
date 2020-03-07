@@ -126,7 +126,6 @@ func (h *Handler) ListenContainer() {
 // ListenService listen docker message for services with cron schedule
 func (h *Handler) ListenService() {
 	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", "mobycron.schedule")
 	filterArgs.Add("type", "service")
 	filterArgs.Add("event", "create")
 	filterArgs.Add("event", "remove")
@@ -235,6 +234,10 @@ func (h *Handler) addServices(filters filters.Args) error {
 	}
 
 	for _, service := range services {
+		if _, ok := service.Spec.Labels["mobycron.schedule"]; !ok {
+			log.Info("skipped, mobycron label not found")
+			continue
+		}
 		j := ServiceJob{
 			Schedule:         service.Spec.Labels["mobycron.schedule"],
 			Action:           service.Spec.Labels["mobycron.action"],

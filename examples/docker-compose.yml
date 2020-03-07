@@ -3,13 +3,18 @@ services:
   cron:
     image: pfillion/mobycron:latest
     environment:
-      MOBYCRON_DOCKER_MODE: 'true'
+      MOBYCRON_DOCKER_MODE: 'swarm'
       MOBYCRON_PARSE_SECOND: 'true'
       CRON_TZ: America/New_York
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     deploy:
-      mode: global
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 30s
+      replicas: 1
 
   busybox:
     image: busybox:latest

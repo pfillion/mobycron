@@ -381,7 +381,6 @@ func TestListenService(t *testing.T) {
 			name: "service create - add service",
 			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
 				eventOpt := types.EventsOptions{Filters: filters.NewArgs()}
-				eventOpt.Filters.Add("label", "mobycron.schedule")
 				eventOpt.Filters.Add("type", "service")
 				eventOpt.Filters.Add("event", "create")
 				eventOpt.Filters.Add("event", "remove")
@@ -913,7 +912,18 @@ func TestAddServices(t *testing.T) {
 			name:    "AddServiceJob in error",
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
-				services := []swarm.Service{{ID: "1"}}
+				services := []swarm.Service{
+					{
+						Spec: swarm.ServiceSpec{
+							Annotations: swarm.Annotations{
+								Labels: map[string]string{
+									"mobycron.schedule": "3 * * * * *",
+								},
+							},
+						},
+					},
+				}
+
 				cli.EXPECT().ServiceList(gomock.Any(), gomock.Any()).Return(services, nil)
 				sc.EXPECT().AddServiceJob(gomock.Any()).Return(errors.New("AddServiceJob in error"))
 			},
@@ -922,6 +932,20 @@ func TestAddServices(t *testing.T) {
 				hasLogField("level", "error"),
 				hasLogField("error", "AddServiceJob in error"),
 				hasLogField("msg", "add service job to cron is in error"),
+			),
+		},
+		{
+			name:    "skipped - no label",
+			filters: filters.NewArgs(),
+			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
+				services := []swarm.Service{{ID: "111"}}
+
+				cli.EXPECT().ServiceList(gomock.Any(), gomock.Any()).Return(services, nil)
+			},
+			checks: check(
+				hasNilError(),
+				hasLogField("level", "info"),
+				hasLogField("msg", "skipped, mobycron label not found"),
 			),
 		},
 	}
