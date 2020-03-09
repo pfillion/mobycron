@@ -2,9 +2,13 @@
 
 [![Build Status](https://drone.pfillion.com/api/badges/pfillion/mobycron/status.svg?branch=master)](https://drone.pfillion.com/pfillion/mobycron)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pfillion/mobycron)](https://goreportcard.com/report/github.com/pfillion/mobycron)
-[![microbadger image](https://images.microbadger.com/badges/image/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own image badge on microbadger.com")
-[![microbadger image](https://images.microbadger.com/badges/version/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own version badge on microbadger.com")
-[![microbadger image](https://images.microbadger.com/badges/commit/pfillion/mobycron.svg)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/pfillion/mobycron)](https://golang.org/ "The Go Programming Language")
+![GitHub](https://img.shields.io/github/license/pfillion/mobycron)
+[![GitHub last commit](https://img.shields.io/github/last-commit/pfillion/mobycron?logo=github)](https://github.com/pfillion/mobycron "GitHub projet")
+
+[![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/pfillion/mobycron/latest?logo=docker)](https://hub.docker.com/r/pfillion/mobycron "Docker Hub Repository")
+[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/pfillion/mobycron/latest?logo=docker)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
+[![MicroBadger Layers (tag)](https://img.shields.io/microbadger/layers/pfillion/mobycron/latest?logo=docker)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
 
 A simple cron deamon for docker written in go. It use the [robfig cron library v3](https://github.com/robfig/cron/tree/v3) engine and all cron jobs can be confgurated by two ways. The first mode will perform actions on others Docker containers based on cron schedule. The second mode is by a JSON file acting like a contab file.
 

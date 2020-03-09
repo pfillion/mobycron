@@ -1,19 +1,22 @@
 FROM alpine:3.11.3
 
-# Build-time metadata as defined at http://label-schema.org
-ARG BUILD_DATE
-ARG VCS_REF
-ARG VERSION
+# Build-time metadata as defined at https://github.com/opencontainers/image-spec
+ARG DATE
+ARG CURRENT_VERSION_MICRO
+ARG COMMIT
+ARG AUTHOR
+
 LABEL \
-    org.label-schema.build-date=$BUILD_DATE \
-    org.label-schema.name="mobycron" \
-    org.label-schema.description="A simple cron deamon for docker written in go" \
-    org.label-schema.url="https://hub.docker.com/r/pfillion/mobycron" \
-    org.label-schema.vcs-ref=$VCS_REF \
-    org.label-schema.vcs-url="https://github.com/pfillion/mobycron" \
-    org.label-schema.vendor="pfillion" \
-    org.label-schema.version=$VERSION \
-    org.label-schema.schema-version="1.0"
+    org.opencontainers.image.created=$DATE \
+    org.opencontainers.image.url="https://hub.docker.com/r/pfillion/mobycron" \
+    org.opencontainers.image.source="https://github.com/pfillion/mobycron" \
+    org.opencontainers.image.version=$CURRENT_VERSION_MICRO \
+    org.opencontainers.image.revision=$COMMIT \
+    org.opencontainers.image.vendor="pfillion" \
+    org.opencontainers.image.title="mobycron" \
+    org.opencontainers.image.description="A simple cron deamon for docker written in go" \
+    org.opencontainers.image.authors=$AUTHOR \
+    org.opencontainers.image.licenses="MIT"
 
 RUN apk add --update --no-cache \
     ca-certificates \

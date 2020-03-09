@@ -2,15 +2,36 @@ schemaVersion: "2.0.0"
 
 metadataTest:
   labels:
-    - key: 'org.label-schema.build-date'
+    - key: 'org.opencontainers.image.created'
       value: '.*'
       isRegex: true
-    - key: 'org.label-schema.vcs-ref'
+    - key: 'org.opencontainers.image.url'
       value: '.*'
       isRegex: true  
-    - key: 'org.label-schema.version'
+    - key: 'org.opencontainers.image.source'
       value: '.*'
       isRegex: true    
+    - key: 'org.opencontainers.image.version'
+      value: '.*'
+      isRegex: true
+    - key: 'org.opencontainers.image.revision'
+      value: '.*'
+      isRegex: true  
+    - key: 'org.opencontainers.image.vendor'
+      value: '.*'
+      isRegex: true 
+    - key: 'org.opencontainers.image.title'
+      value: '.*'
+      isRegex: true
+    - key: 'org.opencontainers.image.description'
+      value: '.*'
+      isRegex: true  
+    - key: 'org.opencontainers.image.authors'
+      value: '.*'
+      isRegex: true 
+    - key: 'org.opencontainers.image.licenses'
+      value: '.*'
+      isRegex: true
   exposedPorts: []
   volumes: []
   entrypoint: ["mobycron"]
