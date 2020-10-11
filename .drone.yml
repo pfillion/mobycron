@@ -47,29 +47,29 @@ steps:
   commands:
   - make docker-test
 
-- name: docker-push
-  image: pfillion/drone-dind
-  volumes:
-  - name: docker_volume
-    path: /var/run
-  environment:
-    DOCKER_USERNAME:
-      from_secret: docker_username
-    DOCKER_PASSWORD:
-      from_secret: docker_password
-  commands:
-  - make docker-push
+# - name: docker-push
+#   image: pfillion/drone-dind
+#   volumes:
+#   - name: docker_volume
+#     path: /var/run
+#   environment:
+#     DOCKER_USERNAME:
+#       from_secret: docker_username
+#     DOCKER_PASSWORD:
+#       from_secret: docker_password
+#   commands:
+#   - make docker-push
 
-- name: notify-microbadger
-  image: plugins/webhook
-  settings:
-    urls:
-      from_secret: webhook_urls
+# - name: notify-microbadger
+#   image: plugins/webhook
+#   settings:
+#     urls:
+#       from_secret: webhook_urls
 
-- name: notify-goreportcard
-  image: appropriate/curl
-  commands:
-  - curl -sS -d "repo=github.com/pfillion/mobycron" https://goreportcard.com/checks
+# - name: notify-goreportcard
+#   image: appropriate/curl
+#   commands:
+#   - curl -sS -d "repo=github.com/pfillion/mobycron" https://goreportcard.com/checks
 
 services:
 - name: docker

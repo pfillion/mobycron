@@ -1,4 +1,4 @@
-FROM alpine:3.11.3
+FROM alpine:3.12.0
 
 # Build-time metadata as defined at https://github.com/opencontainers/image-spec
 ARG DATE

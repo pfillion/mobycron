@@ -64,8 +64,9 @@ bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
 go-get: ## Get external packages
-	go get -u github.com/docker/docker/client@v19.03.6
-	go get -u github.com/golang/mock/gomock
+	go get -u github.com/docker/docker/client@v19.03.13
+	go get -u github.com/golang/mock/gomock	
+	go get -u github.com/golang/mock/mockgen
 	go get -u github.com/pkg/errors
 	go get -u github.com/sirupsen/logrus
 	go get -u github.com/spf13/afero
