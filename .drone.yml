@@ -15,7 +15,7 @@ steps:
 - name: go-build
   image: pfillion/drone-golang
   commands:
-  - make go-get go-build
+  - make go-install go-build
 
 - name: go-test
   image: pfillion/drone-golang
@@ -75,6 +75,7 @@ services:
 - name: docker
   image: pfillion/drone-dind
   privileged: true
+  network_mode: bridge
   volumes:
   - name: docker_volume
     path: /var/run

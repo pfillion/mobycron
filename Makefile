@@ -63,17 +63,9 @@ version: ## Show all versionning infos
 bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
-go-get: ## Get external packages
-	go get -u github.com/docker/docker/client@v19.03.13
-	go get -u github.com/golang/mock/gomock	
-	go get -u github.com/golang/mock/mockgen
-	go get -u github.com/pkg/errors
-	go get -u github.com/sirupsen/logrus
-	go get -u github.com/spf13/afero
-	go get -u github.com/urfave/cli
-	go get -u golang.org/x/lint/golint
-	go get -u github.com/robfig/cron/v3
-	go get -u gotest.tools/v3
+go-install:
+	GO111MODULE=off go get -u -v golang.org/x/lint/golint
+	GO111MODULE=off go get -u -v github.com/golang/mock/mockgen
 
 go-mock: ## Generate mock file
 	mockgen -source=$(ROOT_FOLDER)/cmd/mobycron/main.go -destination=$(ROOT_FOLDER)/cmd/mobycron/main_mock.go -package=main
@@ -93,7 +85,7 @@ go-clean: ## Clean go app
 	go clean -cache -testcache
 	rm -f $(BIN_FOLDER)/$(APP_NAME)
 
-go-mod-clean: ## Run go module cleanup
+go-update-mod: ## Run go module cleanup
 	go mod tidy -v
 
 go-run: ## Run go app
@@ -150,7 +142,7 @@ docker-rm: ## Remove the container
 docker-test: ## Run docker container tests
 	container-structure-test test --image $(NS)/$(IMAGE_NAME):$(CURRENT_VERSION_MICRO) --config tests/config.yaml
 
-build: go-get go-build docker-build ## Build all
+build: go-build docker-build ## Build all
 
 rebuild: go-rebuild docker-rebuild ## Rebuild all
 
