@@ -12,8 +12,6 @@
 
 A simple cron deamon for docker written in go. It use the [robfig cron library v3](https://github.com/robfig/cron/tree/v3) engine and all cron jobs can be confgurated by two ways. The first mode will perform actions on others Docker containers based on cron schedule. The second mode is by a JSON file acting like a contab file.
 
-The docker image include the official backup tool [restic](https://github.com/restic/restic). This may be usefull for schedule prune job and cleanup backup snaphots directly on the restic server hosting REST repositories for optimal performance.
-
 ## Versions
 
 * [latest](https://github.com/pfillion/mobycron/tree/master) available as ```pfillion/mobycron:latest``` at [Docker Hub](https://hub.docker.com/r/pfillion/mobycron/)
