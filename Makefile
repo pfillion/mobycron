@@ -64,8 +64,8 @@ bats-test: ## Test bash scripts
 	bats $(TEST_FOLDER)
 
 go-install:
-	GO111MODULE=off go get -u -v golang.org/x/lint/golint
-	GO111MODULE=off go get -u -v github.com/golang/mock/mockgen
+	go install golang.org/x/lint/golint@latest
+	go install github.com/golang/mock/mockgen@latest
 
 go-mock: ## Generate mock file
 	mockgen -source=$(ROOT_FOLDER)/cmd/mobycron/main.go -destination=$(ROOT_FOLDER)/cmd/mobycron/main_mock.go -package=main
@@ -86,6 +86,7 @@ go-clean: ## Clean go app
 	rm -f $(BIN_FOLDER)/$(APP_NAME)
 
 go-update-mod: ## Run go module cleanup
+	go get -u -v ./...
 	go mod tidy -v
 
 go-run: ## Run go app
