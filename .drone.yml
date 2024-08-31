@@ -60,12 +60,6 @@ steps:
   commands:
   - make docker-push
 
-- name: notify-microbadger
-  image: plugins/webhook
-  settings:
-    urls:
-      from_secret: webhook_urls
-
 - name: notify-goreportcard
   image: appropriate/curl
   commands:

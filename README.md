@@ -8,7 +8,6 @@
 
 [![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/pfillion/mobycron/latest?logo=docker)](https://hub.docker.com/r/pfillion/mobycron "Docker Hub Repository")
 [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/pfillion/mobycron/latest?logo=docker)](https://hub.docker.com/r/pfillion/mobycron "Docker Hub Repository")
-[![MicroBadger Layers (tag)](https://img.shields.io/microbadger/layers/pfillion/mobycron/latest?logo=docker)](https://microbadger.com/images/pfillion/mobycron "Get your own commit badge on microbadger.com")
 
 A simple cron deamon for docker written in go. It use the [robfig cron library v3](https://github.com/robfig/cron/tree/v3) engine and all cron jobs can be confgurated by two ways. The first mode will perform actions on others Docker containers based on cron schedule. The second mode is by a JSON file acting like a contab file.
 
