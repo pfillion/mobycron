@@ -108,7 +108,7 @@ You can mount directly a file or use docker configuration to schedule all job li
 ]
 ```
 
-This file will schedule three cron job.
+This file will schedule 2 cron job.
 
 * The first one will replace ```$NAME``` by the environnement variable configured in the container and print ```Hello``` + ```$NAME``` every minutes.
 * The second will execute a ```curl``` command every 2 minutes. It may be usefull when you need to call any simple **webcron** or **webhook** URL like with [EasyCron](https://www.easycron.com)
