@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -68,7 +68,7 @@ func TestContainerJobRun(t *testing.T) {
 			container: types.Container{ID: "id1", Names: []string{"name1", "name2"}},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
-				cli.EXPECT().ContainerStart(context.Background(), "id1", types.ContainerStartOptions{})
+				cli.EXPECT().ContainerStart(context.Background(), "id1", container.StartOptions{})
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -103,9 +103,9 @@ func TestContainerJobRun(t *testing.T) {
 			action:    "restart",
 			container: types.Container{ID: "id1"},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
-				timeout := 10 * time.Second
+				timeout := container.StopOptions{Timeout: &[]int{10}[0]}
 				s.EXPECT().Add(1)
-				cli.EXPECT().ContainerRestart(context.Background(), "id1", &timeout)
+				cli.EXPECT().ContainerRestart(context.Background(), "id1", timeout)
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -119,9 +119,9 @@ func TestContainerJobRun(t *testing.T) {
 			timeout:   "30",
 			container: types.Container{ID: "id1"},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
-				timeout := 30 * time.Second
+				timeout := container.StopOptions{Timeout: &[]int{30}[0]}
 				s.EXPECT().Add(1)
-				cli.EXPECT().ContainerRestart(context.Background(), "id1", &timeout)
+				cli.EXPECT().ContainerRestart(context.Background(), "id1", timeout)
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -148,9 +148,9 @@ func TestContainerJobRun(t *testing.T) {
 			action:    "stop",
 			container: types.Container{ID: "id1"},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
-				timeout := 10 * time.Second
+				timeout := container.StopOptions{Timeout: &[]int{10}[0]}
 				s.EXPECT().Add(1)
-				cli.EXPECT().ContainerStop(context.Background(), "id1", &timeout)
+				cli.EXPECT().ContainerStop(context.Background(), "id1", timeout)
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -164,9 +164,9 @@ func TestContainerJobRun(t *testing.T) {
 			timeout:   "30",
 			container: types.Container{ID: "id1"},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
-				timeout := 30 * time.Second
+				timeout := container.StopOptions{Timeout: &[]int{30}[0]}
 				s.EXPECT().Add(1)
-				cli.EXPECT().ContainerStop(context.Background(), "id1", &timeout)
+				cli.EXPECT().ContainerStop(context.Background(), "id1", timeout)
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},

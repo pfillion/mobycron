@@ -4,6 +4,8 @@ import (
 	context "context"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
@@ -73,7 +75,7 @@ func (h *Handler) ListenContainer() {
 	filterArgs.Add("event", "create")
 	filterArgs.Add("event", "destroy")
 
-	eventOptions := types.EventsOptions{Filters: filterArgs}
+	eventOptions := events.ListOptions{Filters: filterArgs}
 
 	listen := func() {
 	listenLoop:
@@ -190,11 +192,10 @@ func (h *Handler) ListenService() {
 
 func (h *Handler) addContainers(filters filters.Args) error {
 	log := log.WithFields(log.Fields{
-		"func": "Handler.addContainers",
-	})
+		"func": "Handler.addContainers"})
 	log.Infoln("add containers from filters")
 
-	containers, err := h.cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: filters})
+	containers, err := h.cli.ContainerList(context.Background(), container.ListOptions{All: true, Filters: filters})
 	if err != nil {
 		return err
 	}

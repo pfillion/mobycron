@@ -40,7 +40,7 @@ func (j *ServiceJob) Run() {
 
 	switch j.Action {
 	case "update":
-		var r types.ServiceUpdateResponse
+		var r swarm.ServiceUpdateResponse
 		j.Service.Spec.TaskTemplate.ForceUpdate = j.ServiceVersion.Index
 		r, err = j.cli.ServiceUpdate(context.Background(), j.ServiceID, j.ServiceVersion, j.Service.Spec, types.ServiceUpdateOptions{})
 		for _, w := range r.Warnings {

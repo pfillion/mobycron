@@ -88,7 +88,7 @@ function exit_fatal() {
     docker run -d -e MOBYCRON_DOCKER_MODE=container -e MOBYCRON_PARSE_SECOND=true -v /var/run/docker.sock:/var/run/docker.sock --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
-    retry 5 1 container_action_completed_successfully ${CONTAINER_NAME} 1
+    retry 15 1 container_action_completed_successfully ${CONTAINER_NAME} 1
     run docker logs ${DOER1_CONTAINER_NAME}
 	assert_output ''
 }

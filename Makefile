@@ -11,6 +11,7 @@ COMMITS_SINCE_TAG  := $(word 2,$(DESCRIBE_PARTS))
 
 VERSION            := $(subst v,,$(VERSION_TAG))
 VERSION_PARTS      := $(subst ., ,$(VERSION))
+VERSION_ALPINE     := 3.20
 
 MAJOR              := $(word 1,$(VERSION_PARTS))
 MINOR              := $(word 2,$(VERSION_PARTS))
@@ -54,6 +55,7 @@ version: ## Show all versionning infos
 	@echo CURRENT_VERSION_MICRO="$(CURRENT_VERSION_MICRO)"
 	@echo CURRENT_VERSION_MINOR="$(CURRENT_VERSION_MINOR)"
 	@echo CURRENT_VERSION_MAJOR="$(CURRENT_VERSION_MAJOR)"
+	@echo VERSION_ALPINE="$(VERSION_ALPINE)"
 	@echo DATE="$(DATE)"
 	@echo COMMIT="$(COMMIT)"
 	@echo AUTHOR="$(AUTHOR)"
@@ -75,6 +77,7 @@ go-build: ## Build go app
 	golint -set_exit_status ./...
 	go vet -v ./...
 	GOOS=${GOOS} GOARCH=${GOARCH} go build -o $(BIN_FOLDER)/$(APP_NAME) -v $(APP_FOLDER)
+	chmod 755 $(BIN_FOLDER)/$(APP_NAME)
 
 go-rebuild: go-clean go-build ## Rebuild go app
 
@@ -96,6 +99,7 @@ docker-build: ## Build the image form Dockerfile
 	docker build \
 		--build-arg DATE=$(DATE) \
 		--build-arg CURRENT_VERSION_MICRO=$(CURRENT_VERSION_MICRO) \
+		--build-arg VERSION_ALPINE=$(VERSION_ALPINE) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg AUTHOR=$(AUTHOR) \
 		-t $(NS)/$(IMAGE_NAME):$(CURRENT_VERSION_MICRO) \
@@ -108,6 +112,7 @@ docker-rebuild: ## Rebuild the image form Dockerfile
 	docker build  \
 		--build-arg DATE=$(DATE) \
 		--build-arg CURRENT_VERSION_MICRO=$(CURRENT_VERSION_MICRO) \
+		--build-arg VERSION_ALPINE=$(VERSION_ALPINE) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg AUTHOR=$(AUTHOR) \
 		-t $(NS)/$(IMAGE_NAME):$(CURRENT_VERSION_MICRO) \

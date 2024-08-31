@@ -2,9 +2,9 @@ package cron
 
 import (
 	"context"
-	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
 	cron "github.com/robfig/cron/v3"
@@ -36,15 +36,15 @@ type Cronner interface {
 // DockerClient is the client for docker
 type DockerClient interface {
 	Close() error
-	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
-	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
-	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)
+	ContainerExecAttach(ctx context.Context, execID string, config container.ExecStartOptions) (types.HijackedResponse, error)
+	ContainerExecCreate(ctx context.Context, container string, config container.ExecOptions) (types.IDResponse, error)
+	ContainerExecInspect(ctx context.Context, execID string) (container.ExecInspect, error)
 	ContainerInspect(ctx context.Context, container string) (types.ContainerJSON, error)
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
-	ContainerStart(ctx context.Context, container string, options types.ContainerStartOptions) error
-	ContainerStop(ctx context.Context, container string, timeout *time.Duration) error
-	ContainerRestart(ctx context.Context, container string, timeout *time.Duration) error
-	Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerStart(ctx context.Context, container string, options container.StartOptions) error
+	ContainerStop(ctx context.Context, container string, timeout container.StopOptions) error
+	ContainerRestart(ctx context.Context, container string, options container.StopOptions) error
+	Events(ctx context.Context, options events.ListOptions) (<-chan events.Message, <-chan error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
-	ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (types.ServiceUpdateResponse, error)
+	ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (swarm.ServiceUpdateResponse, error)
 }

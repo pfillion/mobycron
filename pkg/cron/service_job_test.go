@@ -70,7 +70,7 @@ func TestServiceJobRun(t *testing.T) {
 			service: swarm.Service{},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
 				s.EXPECT().Add(1)
-				cli.EXPECT().ServiceUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(types.ServiceUpdateResponse{}, errors.New("update error"))
+				cli.EXPECT().ServiceUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(swarm.ServiceUpdateResponse{}, errors.New("update error"))
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -85,7 +85,7 @@ func TestServiceJobRun(t *testing.T) {
 			action:  "update",
 			service: swarm.Service{},
 			mock: func(s *MockJobSynchroniser, cli *MockDockerClient) {
-				r := types.ServiceUpdateResponse{
+				r := swarm.ServiceUpdateResponse{
 					Warnings: []string{
 						"w1",
 						"w2",

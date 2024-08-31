@@ -4,9 +4,9 @@ import (
 	context "context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -63,15 +63,15 @@ func (j *ContainerJob) Run() {
 }
 
 func (j *ContainerJob) start() error {
-	return j.cli.ContainerStart(context.Background(), j.Container.ID, types.ContainerStartOptions{})
+	return j.cli.ContainerStart(context.Background(), j.Container.ID, container.StartOptions{})
 }
 
 func (j *ContainerJob) restart() error {
-	return j.cli.ContainerRestart(context.Background(), j.Container.ID, j.getTimeout())
+	return j.cli.ContainerRestart(context.Background(), j.Container.ID, *j.getStopOption())
 }
 
 func (j *ContainerJob) stop() error {
-	return j.cli.ContainerStop(context.Background(), j.Container.ID, j.getTimeout())
+	return j.cli.ContainerStop(context.Background(), j.Container.ID, *j.getStopOption())
 }
 
 func (j *ContainerJob) exec() (string, error) {
@@ -120,11 +120,10 @@ func (j *ContainerJob) exec() (string, error) {
 	return out.String(), nil
 }
 
-func (j *ContainerJob) getTimeout() *time.Duration {
+func (j *ContainerJob) getStopOption() *container.StopOptions {
 	var value = 10
 	if j.Timeout != "" {
 		value, _ = strconv.Atoi(j.Timeout)
 	}
-	timeout := time.Duration(value) * time.Second
-	return &timeout
+	return &container.StopOptions{Timeout: &value}
 }

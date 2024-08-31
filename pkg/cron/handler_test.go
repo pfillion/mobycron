@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
@@ -81,7 +82,7 @@ func TestScanContainer(t *testing.T) {
 				args := filters.NewArgs()
 				args.Add("label", "mobycron.schedule")
 
-				opt := types.ContainerListOptions{All: true, Filters: args}
+				opt := container.ListOptions{All: true, Filters: args}
 				cli.EXPECT().ContainerList(gomock.Any(), opt).Return(nil, nil)
 				cli.EXPECT().Close()
 			},
@@ -244,7 +245,7 @@ func TestListenContainer(t *testing.T) {
 				eventOpt.Filters.Add("event", "create")
 				eventOpt.Filters.Add("event", "destroy")
 
-				listOpt := types.ContainerListOptions{All: true, Filters: filters.NewArgs()}
+				listOpt := container.ListOptions{All: true, Filters: filters.NewArgs()}
 				listOpt.Filters.Add("id", "1")
 
 				cli.EXPECT().Events(gomock.Any(), eventOpt).Return(eventChan, errChan)
@@ -575,7 +576,7 @@ func TestAddContainers(t *testing.T) {
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
 				ctx := context.Background()
-				opt := types.ContainerListOptions{All: true, Filters: filters}
+				opt := container.ListOptions{All: true, Filters: filters}
 				containers := []types.Container{
 					{
 						ID: "12345",
@@ -610,7 +611,7 @@ func TestAddContainers(t *testing.T) {
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
 				ctx := context.Background()
-				opt := types.ContainerListOptions{All: true, Filters: filters}
+				opt := container.ListOptions{All: true, Filters: filters}
 				containers := []types.Container{
 					{
 						ID: "1",
