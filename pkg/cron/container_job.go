@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
@@ -18,7 +17,7 @@ type ContainerJob struct {
 	Action    string
 	Timeout   string
 	Command   string
-	Container types.Container
+	Container container.Summary
 	cron      *Cron
 	cli       DockerClient
 }
@@ -86,7 +85,7 @@ func (j *ContainerJob) exec() (string, error) {
 		return "", err
 	}
 
-	createResp, err := j.cli.ContainerExecCreate(ctx, j.Container.ID, types.ExecConfig{AttachStdout: true, AttachStderr: true, Cmd: cmd})
+	createResp, err := j.cli.ContainerExecCreate(ctx, j.Container.ID, container.ExecOptions{AttachStdout: true, AttachStderr: true, Cmd: cmd})
 	if err != nil {
 		return "", err
 	}
@@ -95,7 +94,7 @@ func (j *ContainerJob) exec() (string, error) {
 		return "", errors.New("exec ID empty")
 	}
 
-	attachResp, err := j.cli.ContainerExecAttach(ctx, createResp.ID, types.ExecStartCheck{})
+	attachResp, err := j.cli.ContainerExecAttach(ctx, createResp.ID, container.ExecStartOptions{})
 	if err != nil {
 		return "", err
 	}

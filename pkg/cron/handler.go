@@ -3,10 +3,10 @@ package cron
 import (
 	context "context"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 )
@@ -131,7 +131,7 @@ func (h *Handler) ListenService() {
 	filterArgs.Add("event", "remove")
 	filterArgs.Add("event", "update")
 
-	eventOptions := types.EventsOptions{Filters: filterArgs}
+	eventOptions := events.ListOptions{Filters: filterArgs}
 
 	listen := func() {
 	listenLoop:
@@ -227,7 +227,7 @@ func (h *Handler) addServices(filters filters.Args) error {
 	})
 	log.Infoln("add services from filters")
 
-	services, err := h.cli.ServiceList(context.Background(), types.ServiceListOptions{Filters: filters})
+	services, err := h.cli.ServiceList(context.Background(), swarm.ServiceListOptions{Filters: filters})
 	if err != nil {
 		return err
 	}

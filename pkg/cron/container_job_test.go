@@ -208,9 +208,9 @@ func TestContainerJobRun(t *testing.T) {
 
 				s.EXPECT().Add(1)
 				cli.EXPECT().ContainerInspect(context.Background(), "id1").Return(types.ContainerJSON{}, nil)
-				cli.EXPECT().ContainerExecCreate(context.Background(), "id1", types.ExecConfig{AttachStdout: true, AttachStderr: true, Cmd: []string{"echo", "'hello", "bob'"}}).Return(types.IDResponse{ID: "execid1"}, nil)
-				cli.EXPECT().ContainerExecAttach(context.Background(), "execid1", types.ExecStartCheck{}).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
-				cli.EXPECT().ContainerExecInspect(context.Background(), "execid1").Return(types.ContainerExecInspect{ExitCode: 0}, nil)
+				cli.EXPECT().ContainerExecCreate(context.Background(), "id1", container.ExecOptions{AttachStdout: true, AttachStderr: true, Cmd: []string{"echo", "'hello", "bob'"}}).Return(types.IDResponse{ID: "execid1"}, nil)
+				cli.EXPECT().ContainerExecAttach(context.Background(), "execid1", container.ExecStartOptions{}).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
+				cli.EXPECT().ContainerExecInspect(context.Background(), "execid1").Return(container.ExecInspect{ExitCode: 0}, nil)
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -331,7 +331,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, nil)
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: "1"}, nil)
 				cli.EXPECT().ContainerExecAttach(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
-				cli.EXPECT().ContainerExecInspect(gomock.Any(), gomock.Any()).Return(types.ContainerExecInspect{}, errors.New("error inspect"))
+				cli.EXPECT().ContainerExecInspect(gomock.Any(), gomock.Any()).Return(container.ExecInspect{}, errors.New("error inspect"))
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},
@@ -361,7 +361,7 @@ func TestContainerJobRun(t *testing.T) {
 				cli.EXPECT().ContainerInspect(gomock.Any(), gomock.Any()).Return(types.ContainerJSON{}, nil)
 				cli.EXPECT().ContainerExecCreate(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.IDResponse{ID: "1"}, nil)
 				cli.EXPECT().ContainerExecAttach(gomock.Any(), gomock.Any(), gomock.Any()).Return(types.HijackedResponse{Conn: client, Reader: buf}, nil)
-				cli.EXPECT().ContainerExecInspect(gomock.Any(), gomock.Any()).Return(types.ContainerExecInspect{ExitCode: 1}, nil)
+				cli.EXPECT().ContainerExecInspect(gomock.Any(), gomock.Any()).Return(container.ExecInspect{ExitCode: 1}, nil)
 				cli.EXPECT().Close()
 				s.EXPECT().Done()
 			},

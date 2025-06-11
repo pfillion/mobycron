@@ -167,7 +167,7 @@ func TestScanService(t *testing.T) {
 				args := filters.NewArgs()
 				args.Add("label", "mobycron.schedule")
 
-				opt := types.ServiceListOptions{Filters: args}
+				opt := swarm.ServiceListOptions{Filters: args}
 				cli.EXPECT().ServiceList(gomock.Any(), opt).Return(nil, nil)
 				cli.EXPECT().Close()
 			},
@@ -239,7 +239,7 @@ func TestListenContainer(t *testing.T) {
 		{
 			name: "container created",
 			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
-				eventOpt := types.EventsOptions{Filters: filters.NewArgs()}
+				eventOpt := events.ListOptions{Filters: filters.NewArgs()}
 				eventOpt.Filters.Add("label", "mobycron.schedule")
 				eventOpt.Filters.Add("type", "container")
 				eventOpt.Filters.Add("event", "create")
@@ -381,13 +381,13 @@ func TestListenService(t *testing.T) {
 		{
 			name: "service create - add service",
 			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
-				eventOpt := types.EventsOptions{Filters: filters.NewArgs()}
+				eventOpt := events.ListOptions{Filters: filters.NewArgs()}
 				eventOpt.Filters.Add("type", "service")
 				eventOpt.Filters.Add("event", "create")
 				eventOpt.Filters.Add("event", "remove")
 				eventOpt.Filters.Add("event", "update")
 
-				listOpt := types.ServiceListOptions{Filters: filters.NewArgs()}
+				listOpt := swarm.ServiceListOptions{Filters: filters.NewArgs()}
 				listOpt.Filters.Add("id", "S1")
 
 				cli.EXPECT().Events(gomock.Any(), eventOpt).Return(eventChan, errChan)
@@ -431,7 +431,7 @@ func TestListenService(t *testing.T) {
 		{
 			name: "service update",
 			mock: func(sc *MockCronner, cli *MockDockerClient, eventChan chan events.Message, errChan chan error) {
-				listOpt := types.ServiceListOptions{Filters: filters.NewArgs()}
+				listOpt := swarm.ServiceListOptions{Filters: filters.NewArgs()}
 				listOpt.Filters.Add("id", "S1")
 
 				cli.EXPECT().Events(gomock.Any(), gomock.Any()).Return(eventChan, errChan)
@@ -780,7 +780,7 @@ func TestAddServices(t *testing.T) {
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
 				ctx := context.Background()
-				opt := types.ServiceListOptions{Filters: filters}
+				opt := swarm.ServiceListOptions{Filters: filters}
 				services := []swarm.Service{
 					{
 						ID: "12345",
@@ -826,7 +826,7 @@ func TestAddServices(t *testing.T) {
 			filters: filters.NewArgs(),
 			mock: func(sc *MockCronner, cli *MockDockerClient, filters filters.Args) {
 				ctx := context.Background()
-				opt := types.ServiceListOptions{Filters: filters}
+				opt := swarm.ServiceListOptions{Filters: filters}
 				services := []swarm.Service{
 					{
 						ID: "12345",
