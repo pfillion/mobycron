@@ -4,6 +4,7 @@ NS=${NS:-pfillion}
 IMAGE_NAME=${IMAGE_NAME:-mobycron}
 VERSION=${VERSION:-latest}
 CONTAINER_NAME="mobycron-${VERSION}"
+VOLUME_NAME="${CONTAINER_NAME}-volume"
 DOER1_CONTAINER_NAME="mobycron-doer1-${VERSION}"
 DOER2_CONTAINER_NAME="mobycron-doer2-${VERSION}"
 
@@ -15,6 +16,7 @@ function teardown(){
     docker rm -f ${CONTAINER_NAME}
     docker rm -f ${DOER1_CONTAINER_NAME} || true
     docker rm -f ${DOER2_CONTAINER_NAME} || true
+    docker volume rm -f ${VOLUME_NAME} || true
 }
 
 function job_completed_successfully() {
@@ -34,8 +36,13 @@ function exit_fatal() {
 }
 
 @test "container scan - config file only with multiple jobs" {
+    # Arrange
+    docker volume create ${VOLUME_NAME}
+    docker create --name ${DOER1_CONTAINER_NAME} -v ${VOLUME_NAME}:/configs busybox /bin/true
+    docker cp $(pwd)/tests/configs/. ${DOER1_CONTAINER_NAME}:/configs
+
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=none -e MOBYCRON_PARSE_SECOND=true -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=none -e MOBYCRON_PARSE_SECOND=true -e MOBYCRON_CONFIG_FILE=/configs/config.json -v ${VOLUME_NAME}:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 job_completed_successfully ${CONTAINER_NAME} 3
@@ -45,8 +52,13 @@ function exit_fatal() {
 }
 
 @test "container scan - parse second not permitted" {
+    # Arrange
+    docker volume create ${VOLUME_NAME}
+    docker create --name ${DOER1_CONTAINER_NAME} -v ${VOLUME_NAME}:/configs busybox /bin/true
+    docker cp $(pwd)/tests/configs/. ${DOER1_CONTAINER_NAME}:/configs
+
     # Act
-    docker run -d -e MOBYCRON_DOCKER_MODE=none -e MOBYCRON_PARSE_SECOND=false -e MOBYCRON_CONFIG_FILE=/configs/config.json -v $(pwd)/tests/configs:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
+    docker run -d -e MOBYCRON_DOCKER_MODE=none -e MOBYCRON_PARSE_SECOND=false -e MOBYCRON_CONFIG_FILE=/configs/config.json -v ${VOLUME_NAME}:/configs --name ${CONTAINER_NAME} ${NS}/${IMAGE_NAME}:${VERSION}
 	
     # Assert
     retry 5 1 exit_fatal ${CONTAINER_NAME} 1

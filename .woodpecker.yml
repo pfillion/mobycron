@@ -1,0 +1,65 @@
+when:
+  - event: [push, manual]
+
+workspace:
+  base: /go
+  path: src/github.com/pfillion/mobycron
+
+clone:
+  - name: git
+    image: woodpeckerci/plugin-git
+    settings:
+      tags: true
+
+steps:
+  - name: go-build
+    image: pfillion/golang
+    commands:
+      - make go-install go-build
+
+  - name: go-test
+    image: pfillion/golang
+    commands:
+      - make go-test
+
+  - name: docker-build
+    image: pfillion/dind
+    commands:
+      - make docker-build
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  - name: bats-test
+    image: pfillion/dind
+    commands:
+      - make bats-test
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock      
+
+  - name: docker-test
+    image: pfillion/dind
+    commands:
+      - make docker-test
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  - name: docker-push
+    image: pfillion/dind
+    environment:
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+    commands:
+      - make docker-push
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock
+    when:
+      - evaluate: 'MODE_LOCAL != "true"'
+
+  - name: notify-goreportcard
+    image: appropriate/curl
+    commands:
+      - curl -sS -d "repo=github.com/pfillion/mobycron" https://goreportcard.com/checks      
+    when:
+      - evaluate: 'MODE_LOCAL != "true"'

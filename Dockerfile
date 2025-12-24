@@ -1,4 +1,4 @@
-ARG VERSION_ALPINE
+ARG VERSION_ALPINE=latest
 
 FROM alpine:${VERSION_ALPINE}
 
@@ -27,7 +27,7 @@ RUN apk add --update --no-cache \
     tzdata \
     libc6-compat
 
-COPY bin /usr/bin
+COPY --chmod=0755 bin /usr/bin
 
 ENTRYPOINT [ "mobycron"]
 

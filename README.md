@@ -1,6 +1,6 @@
 # mobycron
 
-[![Build Status](https://drone.pfillion.com/api/badges/pfillion/mobycron/status.svg?branch=master)](https://drone.pfillion.com/pfillion/mobycron)
+[![status-badge](https://woodpecker.pfillion.com/api/badges/7/status.svg)](https://woodpecker.pfillion.com/repos/7)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pfillion/mobycron)](https://goreportcard.com/report/github.com/pfillion/mobycron)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/pfillion/mobycron)](https://golang.org/ "The Go Programming Language")
 ![GitHub](https://img.shields.io/github/license/pfillion/mobycron)

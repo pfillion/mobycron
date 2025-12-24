@@ -2,6 +2,10 @@ SHELL = /bin/sh
 .PHONY: help
 .DEFAULT_GOAL := help
 
+ifeq ($(MODE_LOCAL),true)
+	GIT_CONFIG_GLOBAL := $(shell git config --global --add safe.directory /go/src/github.com/pfillion/mobycron > /dev/null)
+endif
+
 # Version
 DESCRIBE           := $(shell git describe --match "v*" --always --tags)
 DESCRIBE_PARTS     := $(subst -, ,$(DESCRIBE))
@@ -156,5 +160,8 @@ rebuild: go-rebuild docker-rebuild ## Rebuild all
 run: docker-run ## Run all
 
 test: go-test bats-test docker-test ## Run all tests
+
+test-ci: ## Run CI pipeline locally
+	woodpecker-cli exec --local --repo-trusted-volumes=true --env=MODE_LOCAL=true
 
 release: build test docker-push ## Build and push the image to a registry
