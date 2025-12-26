@@ -15,7 +15,7 @@ COMMITS_SINCE_TAG  := $(word 2,$(DESCRIBE_PARTS))
 
 VERSION            := $(subst v,,$(VERSION_TAG))
 VERSION_PARTS      := $(subst ., ,$(VERSION))
-VERSION_ALPINE     := 3.22
+VERSION_ALPINE     := 3.23
 
 MAJOR              := $(word 1,$(VERSION_PARTS))
 MINOR              := $(word 2,$(VERSION_PARTS))
@@ -89,11 +89,11 @@ go-test: ## Test go app
 	go test -cover -v ./...
 
 go-clean: ## Clean go app
-	go clean -cache -testcache
+	go clean -cache -testcache -fuzzcache
 	rm -f $(BIN_FOLDER)/$(APP_NAME)
 
 go-update-mod: ## Run go module cleanup
-	go get go
+	go clean -modcache
 	go get -u -v ./...
 	go mod tidy -v
 
